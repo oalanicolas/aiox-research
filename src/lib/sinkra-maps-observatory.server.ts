@@ -333,7 +333,8 @@ export type SinkraMapsObservatoryData = {
 }
 
 const CONTENT_LIMIT = 50000
-const INDEX_CACHE_TTL_MS = 30_000
+const INDEX_CACHE_TTL_MS = 5 * 60_000
+const RUN_CACHE_TTL_MS = 5 * 60_000
 const KEY_FILES = [
   ["observatory_map.yaml", "Observatory"],
   ["composition_map.yaml", "Composition"],
@@ -362,6 +363,16 @@ let indexCache:
       summaries: Omit<SinkraMapRunSummary, "active">[]
     }
   | null = null
+
+const runCache = new Map<
+  string,
+  {
+    expiresAt: number
+    files: string[]
+    documentsMeta: SinkraMapDocument[]
+    structured: SinkraMapStructured
+  }
+>()
 
 function findRepoRoot(startPath: string) {
   let cursor = startPath
@@ -1069,22 +1080,104 @@ function extractStructured(
   }
 }
 
-async function buildDocuments(runPath: string, slug: string, files: string[]): Promise<SinkraMapDocument[]> {
-  const docs: SinkraMapDocument[] = []
-  for (const file of files) {
-    const full = path.join(runPath, file)
-    const st = await stat(full)
-    const raw = await readFile(full, "utf8")
-    docs.push({
-      id: `${slug}/${file}`,
-      file,
-      phase: phaseForFile(file),
-      bytes: st.size,
-      content: raw.length > CONTENT_LIMIT ? `${raw.slice(0, CONTENT_LIMIT)}\n\n...` : raw,
-      truncated: raw.length > CONTENT_LIMIT,
-    })
+async function buildDocumentIndex(runPath: string, slug: string, files: string[]): Promise<SinkraMapDocument[]> {
+  return Promise.all(
+    files.map(async (file) => {
+      const full = path.join(runPath, file)
+      const st = await stat(full)
+      return {
+        id: `${slug}/${file}`,
+        file,
+        phase: phaseForFile(file),
+        bytes: st.size,
+        content: "",
+        truncated: st.size > CONTENT_LIMIT,
+      }
+    }),
+  )
+}
+
+async function loadDocumentContent(runPath: string, slug: string, doc: SinkraMapDocument): Promise<SinkraMapDocument> {
+  const raw = await readFile(path.join(runPath, doc.file), "utf8")
+  return {
+    ...doc,
+    id: `${slug}/${doc.file}`,
+    content: raw.length > CONTENT_LIMIT ? `${raw.slice(0, CONTENT_LIMIT)}\n\n...` : raw,
+    truncated: raw.length > CONTENT_LIMIT,
   }
-  return docs
+}
+
+async function buildRunPayload(root: string, slug: string) {
+  const cacheKey = `${root}:${slug}`
+  const now = Date.now()
+  const cached = runCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) return cached
+
+  const runPath = path.join(root, slug)
+  const files = await listFiles(runPath)
+  const documentsMeta = await buildDocumentIndex(runPath, slug, files)
+  const [
+    workflowYaml,
+    tasksYaml,
+    gatesYaml,
+    scoreYaml,
+    processYaml,
+    domainYaml,
+    dependencyYaml,
+    observatoryYaml,
+    automationYaml,
+    raciYaml,
+    gapsYaml,
+    complianceYaml,
+    compositionYaml,
+    tokenYaml,
+    stateJson,
+    metricsJsonl,
+  ] = await Promise.all([
+    files.includes("workflow_definition.yaml") ? readYaml(runPath, "workflow_definition.yaml") : Promise.resolve({}),
+    files.includes("task_definitions.yaml") ? readYaml(runPath, "task_definitions.yaml") : Promise.resolve({}),
+    files.includes("quality_gates.yaml") ? readYaml(runPath, "quality_gates.yaml") : Promise.resolve({}),
+    files.includes("score_card.yaml") ? readYaml(runPath, "score_card.yaml") : Promise.resolve({}),
+    files.includes("process_map.yaml") ? readYaml(runPath, "process_map.yaml") : Promise.resolve({}),
+    files.includes("domain_map.yaml") ? readYaml(runPath, "domain_map.yaml") : Promise.resolve({}),
+    files.includes("dependency_graph.yaml") ? readYaml(runPath, "dependency_graph.yaml") : Promise.resolve({}),
+    files.includes("observatory_map.yaml") ? readYaml(runPath, "observatory_map.yaml") : Promise.resolve({}),
+    files.includes("automation_specs.yaml") ? readYaml(runPath, "automation_specs.yaml") : Promise.resolve({}),
+    files.includes("raci_matrix.yaml") ? readYaml(runPath, "raci_matrix.yaml") : Promise.resolve({}),
+    files.includes("capability_gaps.yaml") ? readYaml(runPath, "capability_gaps.yaml") : Promise.resolve({}),
+    files.includes("compliance_score.yaml") ? readYaml(runPath, "compliance_score.yaml") : Promise.resolve({}),
+    files.includes("composition_map.yaml") ? readYaml(runPath, "composition_map.yaml") : Promise.resolve({}),
+    files.includes("token_assignments.yaml") ? readYaml(runPath, "token_assignments.yaml") : Promise.resolve({}),
+    files.includes("sinkra-state.json") ? readJson(runPath, "sinkra-state.json") : Promise.resolve({}),
+    files.includes("metrics.jsonl") ? readJsonl(runPath, "metrics.jsonl") : Promise.resolve([]),
+  ])
+
+  const payload = {
+    expiresAt: now + RUN_CACHE_TTL_MS,
+    files,
+    documentsMeta,
+    structured: extractStructured(
+      files,
+      workflowYaml,
+      tasksYaml,
+      gatesYaml,
+      scoreYaml,
+      processYaml,
+      domainYaml,
+      dependencyYaml,
+      observatoryYaml,
+      automationYaml,
+      raciYaml,
+      gapsYaml,
+      complianceYaml,
+      compositionYaml,
+      tokenYaml,
+      stateJson,
+      metricsJsonl,
+    ),
+  }
+  runCache.set(cacheKey, payload)
+  return payload
 }
 
 async function buildSummary(root: string, slug: string): Promise<Omit<SinkraMapRunSummary, "active">> {
@@ -1178,26 +1271,21 @@ export async function getSinkraMapsObservatoryData(slug?: string, file?: string)
     .sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug))
   const selectedRun = runs.find((run) => run.slug === selectedSlug) ?? runs[0]
   const runPath = path.join(root, selectedRun.slug)
-  const files = await listFiles(runPath)
-  const documents = await buildDocuments(runPath, selectedRun.slug, files)
-  const selectedDocument = documents.find((doc) => doc.file === file) ?? documents[0]
-
-  const workflowYaml = files.includes("workflow_definition.yaml") ? await readYaml(runPath, "workflow_definition.yaml") : {}
-  const tasksYaml = files.includes("task_definitions.yaml") ? await readYaml(runPath, "task_definitions.yaml") : {}
-  const gatesYaml = files.includes("quality_gates.yaml") ? await readYaml(runPath, "quality_gates.yaml") : {}
-  const scoreYaml = files.includes("score_card.yaml") ? await readYaml(runPath, "score_card.yaml") : {}
-  const processYaml = files.includes("process_map.yaml") ? await readYaml(runPath, "process_map.yaml") : {}
-  const domainYaml = files.includes("domain_map.yaml") ? await readYaml(runPath, "domain_map.yaml") : {}
-  const dependencyYaml = files.includes("dependency_graph.yaml") ? await readYaml(runPath, "dependency_graph.yaml") : {}
-  const observatoryYaml = files.includes("observatory_map.yaml") ? await readYaml(runPath, "observatory_map.yaml") : {}
-  const automationYaml = files.includes("automation_specs.yaml") ? await readYaml(runPath, "automation_specs.yaml") : {}
-  const raciYaml = files.includes("raci_matrix.yaml") ? await readYaml(runPath, "raci_matrix.yaml") : {}
-  const gapsYaml = files.includes("capability_gaps.yaml") ? await readYaml(runPath, "capability_gaps.yaml") : {}
-  const complianceYaml = files.includes("compliance_score.yaml") ? await readYaml(runPath, "compliance_score.yaml") : {}
-  const compositionYaml = files.includes("composition_map.yaml") ? await readYaml(runPath, "composition_map.yaml") : {}
-  const tokenYaml = files.includes("token_assignments.yaml") ? await readYaml(runPath, "token_assignments.yaml") : {}
-  const stateJson = files.includes("sinkra-state.json") ? await readJson(runPath, "sinkra-state.json") : {}
-  const metricsJsonl = files.includes("metrics.jsonl") ? await readJsonl(runPath, "metrics.jsonl") : []
+  const runPayload = await buildRunPayload(root, selectedRun.slug)
+  const selectedDocumentMeta = runPayload.documentsMeta.find((doc) => doc.file === file) ?? runPayload.documentsMeta[0]
+  const selectedDocument = selectedDocumentMeta
+    ? await loadDocumentContent(runPath, selectedRun.slug, selectedDocumentMeta)
+    : {
+        id: selectedRun.slug,
+        file: "sinkra-output.md",
+        phase: "artifact",
+        bytes: 0,
+        content: "",
+        truncated: false,
+      }
+  const documents = runPayload.documentsMeta.map((doc) =>
+    doc.file === selectedDocument.file ? selectedDocument : doc,
+  )
 
   return {
     stats: {
@@ -1211,24 +1299,6 @@ export async function getSinkraMapsObservatoryData(slug?: string, file?: string)
     selectedRun,
     documents,
     selectedDocument,
-    structured: extractStructured(
-      files,
-      workflowYaml,
-      tasksYaml,
-      gatesYaml,
-      scoreYaml,
-      processYaml,
-      domainYaml,
-      dependencyYaml,
-      observatoryYaml,
-      automationYaml,
-      raciYaml,
-      gapsYaml,
-      complianceYaml,
-      compositionYaml,
-      tokenYaml,
-      stateJson,
-      metricsJsonl,
-    ),
+    structured: runPayload.structured,
   }
 }

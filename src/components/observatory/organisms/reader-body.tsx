@@ -1,4 +1,5 @@
 import { type ReactNode, type RefObject } from "react"
+import dynamic from "next/dynamic"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import YAML from "yaml"
@@ -27,25 +28,52 @@ import type {
   ObservatoryTiebreaker,
   ObservatoryTypeSpecific,
 } from "../foundations/types"
-import type { ReaderMode } from "../foundations/constants"
+import type { ObservatorySource, ReaderMode } from "../foundations/constants"
 import { coverageNumeric, statusKeyFromRaw } from "../foundations/utils"
-import { DISPLAY_FONT, MONO_FONT, SERIF_FONT } from "../foundations/theme"
-import { CoverageView } from "./coverage-view"
-import { DecisionView } from "./decision-view"
-import { DuelView } from "./duel-view"
-import { MatrixView } from "./matrix-view"
-import { PersonasView } from "./personas-view"
-import {
-  SinkraAccountabilityReport,
-  SinkraAutomationReport,
-  SinkraEvidenceReport,
-  SinkraFlowReport,
-  SinkraGapsReport,
-  SinkraGovernanceReport,
-  SinkraMapReport,
-} from "./sinkra-map-report"
-import { TcoView } from "./tco-view"
-import { WeightsView } from "./weights-view"
+import { DISPLAY_FONT, MONO_FONT, SERIF_FONT, observatoryDarkThemeVars } from "../foundations/theme"
+
+const MatrixView = dynamic(() => import("./matrix-view").then((mod) => mod.MatrixView), {
+  loading: () => <ReportLoader label="Matrix" />,
+})
+const DuelView = dynamic(() => import("./duel-view").then((mod) => mod.DuelView), {
+  loading: () => <ReportLoader label="Duel" />,
+})
+const PersonasView = dynamic(() => import("./personas-view").then((mod) => mod.PersonasView), {
+  loading: () => <ReportLoader label="Personas" />,
+})
+const TcoView = dynamic(() => import("./tco-view").then((mod) => mod.TcoView), {
+  loading: () => <ReportLoader label="TCO" />,
+})
+const CoverageView = dynamic(() => import("./coverage-view").then((mod) => mod.CoverageView), {
+  loading: () => <ReportLoader label="Coverage" />,
+})
+const DecisionView = dynamic(() => import("./decision-view").then((mod) => mod.DecisionView), {
+  loading: () => <ReportLoader label="Decision" />,
+})
+const WeightsView = dynamic(() => import("./weights-view").then((mod) => mod.WeightsView), {
+  loading: () => <ReportLoader label="Weights" />,
+})
+const SinkraMapReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraMapReport), {
+  loading: () => <ReportLoader label="SINKRA Map" dark />,
+})
+const SinkraFlowReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraFlowReport), {
+  loading: () => <ReportLoader label="Fluxo" dark />,
+})
+const SinkraAutomationReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraAutomationReport), {
+  loading: () => <ReportLoader label="Automação" dark />,
+})
+const SinkraGovernanceReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraGovernanceReport), {
+  loading: () => <ReportLoader label="Governança" dark />,
+})
+const SinkraAccountabilityReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraAccountabilityReport), {
+  loading: () => <ReportLoader label="RACI" dark />,
+})
+const SinkraGapsReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraGapsReport), {
+  loading: () => <ReportLoader label="Gaps" dark />,
+})
+const SinkraEvidenceReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraEvidenceReport), {
+  loading: () => <ReportLoader label="Evidências" dark />,
+})
 
 /* Organism — reader body. Routes between modes:
  *   - document  → markdown (default for all sources)
@@ -54,6 +82,7 @@ import { WeightsView } from "./weights-view"
  *   - tco       → TCO scenarios table (bench/product)
  *   - decision  → decision tree + tiebreakers + cliffs (bench) */
 export function ReaderBody({
+  source = "research",
   mode = "document",
   content,
   file,
@@ -75,6 +104,7 @@ export function ReaderBody({
   sourceSummary,
   typeSpecific,
 }: {
+  source?: ObservatorySource
   mode?: ReaderMode
   content: string
   file?: string
@@ -96,6 +126,9 @@ export function ReaderBody({
   sourceSummary?: string[]
   typeSpecific?: ObservatoryTypeSpecific
 }) {
+  const benchReport = (children: ReactNode) =>
+    source === "bench" ? <BenchReportShell>{children}</BenchReportShell> : children
+
   if (mode === "overview") {
     return <OverviewView runs={runs ?? []} />
   }
@@ -127,46 +160,46 @@ export function ReaderBody({
     return <ResearchPlayersView players={researchPlayers ?? []} />
   }
   if (mode === "score") {
-    return <ScoreView dimensions={scoreDimensions ?? []} scoreMetrics={scoreMetrics ?? []} />
+    return benchReport(<ScoreView dimensions={scoreDimensions ?? []} scoreMetrics={scoreMetrics ?? []} />)
   }
   if (mode === "matrix" && matrix) {
-    return <MatrixView matrix={matrix} playerProfiles={playerProfiles ?? []} />
+    return benchReport(<MatrixView matrix={matrix} playerProfiles={playerProfiles ?? []} />)
   }
   if (mode === "duel" && matrix) {
-    return <DuelView matrix={matrix} playerProfiles={playerProfiles ?? []} />
+    return benchReport(<DuelView matrix={matrix} playerProfiles={playerProfiles ?? []} />)
   }
   if (mode === "personas") {
-    return <PersonasView personas={personas ?? []} playerProfiles={playerProfiles ?? []} />
+    return benchReport(<PersonasView personas={personas ?? []} playerProfiles={playerProfiles ?? []} />)
   }
   if (mode === "tco" && tco) {
-    return <TcoView tco={tco} />
+    return benchReport(<TcoView tco={tco} />)
   }
   if (mode === "coverage") {
-    return (
+    return benchReport(
       <CoverageView
         typeSpecific={typeSpecific ?? {}}
         playerProfiles={playerProfiles ?? []}
-      />
+      />,
     )
   }
   if (mode === "decision") {
-    return (
+    return benchReport(
       <DecisionView
         decisionTree={decisionTree ?? []}
         tiebreakers={tiebreakers ?? []}
         cliffs={cliffs ?? []}
         categorical={categorical ?? []}
         editorsNote={editorsNote ?? null}
-      />
+      />,
     )
   }
   if (mode === "weights" && matrix) {
-    return (
+    return benchReport(
       <WeightsView
         matrix={matrix}
         personas={personas ?? []}
         playerProfiles={playerProfiles ?? []}
-      />
+      />,
     )
   }
   if (mode === "workflow") {
@@ -192,6 +225,48 @@ export function ReaderBody({
         </ReactMarkdown>
       </article>
     </LightScrollArea>
+  )
+}
+
+function BenchReportShell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="flex min-h-0 flex-1 bg-[var(--paper)] text-[var(--ink)]"
+      style={observatoryDarkThemeVars}
+    >
+      {children}
+    </div>
+  )
+}
+
+function ReportLoader({ label, dark = false }: { label: string; dark?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 items-center justify-center border-t border-[var(--rule-soft)]",
+        dark && "bg-[var(--aiox-dark,#050505)] text-[var(--aiox-cream-alt,#f5f4e7)]",
+      )}
+    >
+      <div className="grid gap-2 text-center">
+        <div
+          className={cn(
+            "mx-auto h-1.5 w-20 overflow-hidden bg-[var(--ink-faint)]",
+            dark && "bg-white/10",
+          )}
+        >
+          <div className="h-full w-1/2 animate-pulse bg-[var(--lime-ink)]" />
+        </div>
+        <div
+          className={cn(
+            "text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]",
+            dark && "text-white/45",
+          )}
+          style={{ fontFamily: MONO_FONT }}
+        >
+          Carregando {label}
+        </div>
+      </div>
+    </div>
   )
 }
 

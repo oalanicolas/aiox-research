@@ -25,6 +25,27 @@ export const observatoryThemeVars: CSSProperties = {
   "--serif": "var(--font-bb-sans), 'Geist', system-ui, sans-serif",
 } as CSSProperties
 
+export const observatoryDarkThemeVars: CSSProperties = {
+  "--paper": "var(--aiox-dark, #050505)",
+  "--paper-alt": "var(--aiox-surface, #101012)",
+  "--paper-deep": "var(--aiox-surface-2, #171719)",
+  "--ink": "var(--aiox-cream-alt, #f5f4e7)",
+  "--ink-2": "rgba(245, 244, 231, 0.78)",
+  "--ink-3": "rgba(245, 244, 231, 0.55)",
+  "--ink-dim": "rgba(245, 244, 231, 0.38)",
+  "--ink-faint": "rgba(245, 244, 231, 0.18)",
+  "--rule": "rgba(245, 244, 231, 0.16)",
+  "--rule-soft": "rgba(245, 244, 231, 0.08)",
+  "--rule-strong": "rgba(245, 244, 231, 0.28)",
+  "--lime-ink": "var(--aiox-lime, #d1ff00)",
+  "--lime-fill": "var(--aiox-lime, #d1ff00)",
+  "--warning-ink": "oklch(0.79 0.17 72)",
+  "--danger-ink": "oklch(0.73 0.22 25)",
+  "--dash-control-h": "34px",
+  "--dash-header-h": "44px",
+  "--serif": "var(--font-bb-sans), 'Geist', system-ui, sans-serif",
+} as CSSProperties
+
 export const MONO_FONT = "var(--font-bb-mono), 'Geist Mono', ui-monospace, monospace"
 export const SANS_FONT = "var(--font-bb-sans), 'Geist', system-ui, sans-serif"
 export const DISPLAY_FONT = "var(--font-bb-display), var(--font-bb-sans), system-ui, sans-serif"

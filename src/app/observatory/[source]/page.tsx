@@ -3,7 +3,9 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { Observatory } from "@/components/observatory/observatory"
 import {
+  getAvailableObservatorySources,
   getObservatoryData,
+  isObservatorySourceAvailable,
   type ObservatorySource,
 } from "@/lib/observatory.server"
 
@@ -48,10 +50,11 @@ export async function generateMetadata({ params }: ObservatoryPageProps): Promis
 
 export default async function ObservatoryPage({ params, searchParams }: ObservatoryPageProps) {
   const { source } = await params
-  if (!VALID_SOURCES.includes(source as ObservatorySource)) {
+  if (!VALID_SOURCES.includes(source as ObservatorySource) || !isObservatorySourceAvailable(source as ObservatorySource)) {
     notFound()
   }
   const sp = await searchParams
+  const availableSources = getAvailableObservatorySources()
   const { data } = await getObservatoryData({
     source: source as ObservatorySource,
     slug: sp?.slug,
@@ -61,7 +64,7 @@ export default async function ObservatoryPage({ params, searchParams }: Observat
   return (
     <div>
       <Suspense fallback={null}>
-        <Observatory data={data} basePath="/observatory" />
+        <Observatory data={data} availableSources={availableSources} basePath="/observatory" />
       </Suspense>
     </div>
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import { type CSSProperties } from "react"
 import { Check, List, MessageSquarePlus, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { OBSERVATORY_SOURCES, type ObservatorySource } from "../foundations/constants"
@@ -15,6 +16,7 @@ export function Topbar({
   selectedTitle,
   selectedDate,
   selectedSchema,
+  availableSources = OBSERVATORY_SOURCES,
   onChangeSource,
   onCopyNew,
   onCopyDeepen,
@@ -29,6 +31,7 @@ export function Topbar({
   selectedTitle: string
   selectedDate: string
   selectedSchema: string
+  availableSources?: Array<[ObservatorySource, string]>
   onChangeSource: (next: ObservatorySource) => void
   onCopyNew: () => void
   onCopyDeepen: () => void
@@ -36,31 +39,55 @@ export function Topbar({
   copiedNew?: boolean
   copiedDeepen?: boolean
 }) {
+  const topbarVars = {
+    "--top-paper": "var(--aiox-dark, #050505)",
+    "--top-paper-alt": "var(--aiox-surface, #0f0f11)",
+    "--top-ink": "var(--aiox-cream-alt, #f5f4e7)",
+    "--top-ink-3": "rgba(245, 244, 231, 0.48)",
+    "--top-ink-dim": "rgba(245, 244, 231, 0.34)",
+    "--top-ink-faint": "rgba(245, 244, 231, 0.18)",
+    "--top-rule": "rgba(245, 244, 231, 0.13)",
+    "--top-rule-soft": "rgba(245, 244, 231, 0.08)",
+    "--top-lime": "var(--aiox-lime, #d1ff00)",
+    "--top-on-lime": "var(--aiox-dark, #050505)",
+  } as CSSProperties
+
   return (
-    <header className="border-b border-[var(--rule)] bg-[var(--paper)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 items-baseline gap-2 overflow-hidden sm:gap-3">
-          <h1
-            className="truncate text-[21px] font-black uppercase leading-none tracking-[-0.035em] text-[var(--ink)] sm:text-[26px]"
-            style={{ fontFamily: DISPLAY_FONT }}
-          >
-            AIOX Dash
-          </h1>
-          <span
-            className="hidden truncate text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)] sm:inline"
-            style={{ fontFamily: MONO_FONT }}
-          >
-            {brandLabel}
-          </span>
+    <header
+      className="sticky top-0 z-50 border-b border-[var(--top-rule)] bg-[var(--top-paper)]"
+      style={topbarVars}
+    >
+      <div className="flex min-h-12 items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="flex min-w-0 shrink-0 items-center gap-3 overflow-hidden">
+          <img
+            src="/logo/AIOX-White.svg"
+            alt="AIOX"
+            className="h-5 w-auto shrink-0"
+          />
+          <span className="hidden h-4 w-px shrink-0 bg-[var(--top-rule)] lg:block" />
+          <div className="min-w-0">
+            <h1
+              className="truncate text-[12px] font-black uppercase leading-none tracking-[0.02em] text-[var(--top-ink)]"
+              style={{ fontFamily: DISPLAY_FONT }}
+            >
+              Dash
+            </h1>
+            <span
+              className="mt-0.5 hidden truncate text-[8px] uppercase tracking-[0.18em] text-[var(--top-ink-3)] sm:block"
+              style={{ fontFamily: MONO_FONT }}
+            >
+              {source === "sinkra-maps" ? "Operational maps" : brandLabel}
+            </span>
+          </div>
         </div>
 
-        <nav className="flex w-full max-w-full items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:w-auto sm:flex-wrap sm:justify-end sm:gap-2 sm:overflow-visible sm:pb-0">
+        <nav className="flex min-w-0 flex-1 items-center justify-end gap-0 overflow-x-auto [scrollbar-width:none]">
           {/* Source segmented toggle — dynamic across all registered sources */}
           <div
-            className="mr-1 grid shrink-0 gap-px border border-[var(--rule)] bg-[var(--rule)] p-px"
-            style={{ gridTemplateColumns: `repeat(${OBSERVATORY_SOURCES.length}, minmax(0, 1fr))` }}
+            className="flex shrink-0 items-center"
+            style={{ gridTemplateColumns: `repeat(${availableSources.length}, minmax(0, 1fr))` }}
           >
-            {OBSERVATORY_SOURCES.map(([key, label]) => {
+            {availableSources.map(([key, label]) => {
               const active = key === source
               return (
                 <button
@@ -68,10 +95,10 @@ export function Topbar({
                   type="button"
                   onClick={() => !active && onChangeSource(key)}
                   className={cn(
-                    "h-[var(--dash-control-h)] whitespace-nowrap px-2.5 text-[10px] uppercase tracking-[0.12em] transition-colors sm:px-3",
+                    "inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap border-l border-[var(--top-rule)] px-3 text-[9px] uppercase tracking-[0.12em] transition-colors sm:px-4",
                     active
-                      ? "bg-[var(--ink)] text-[var(--paper)]"
-                      : "bg-[var(--paper-alt)] text-[var(--ink-3)] hover:bg-[var(--paper)] hover:text-[var(--ink)]",
+                      ? "bg-[rgba(209,255,0,0.05)] text-[var(--top-lime)]"
+                      : "bg-transparent text-[var(--top-ink-3)] hover:bg-[rgba(245,244,231,0.03)] hover:text-[var(--top-ink)]",
                   )}
                   style={{ fontFamily: MONO_FONT }}
                 >
@@ -86,10 +113,10 @@ export function Topbar({
             onClick={onCopyNew}
             title={`Copiar comando CLI: ${newActionLabel}`}
             className={cn(
-              "inline-flex h-[var(--dash-control-h)] items-center gap-2 whitespace-nowrap border px-3 text-[10.5px] uppercase tracking-[0.1em] transition-colors sm:px-4",
+              "inline-flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap border-l border-[var(--top-rule)] px-3 text-[9px] uppercase tracking-[0.12em] transition-colors sm:px-4",
               copiedNew
-                ? "border-[var(--lime-ink)] bg-[var(--paper)] text-[var(--lime-ink)]"
-                : "border-[var(--ink)] bg-[var(--ink)] text-[var(--paper)] hover:bg-[var(--paper)] hover:text-[var(--ink)]",
+                ? "bg-transparent text-[var(--top-lime)]"
+                : "bg-transparent text-[var(--top-ink-3)] hover:bg-[rgba(245,244,231,0.03)] hover:text-[var(--top-ink)]",
             )}
             style={{ fontFamily: MONO_FONT }}
           >
@@ -102,10 +129,10 @@ export function Topbar({
             onClick={onCopyDeepen}
             title="Copia um comando CLI para aprofundar o item selecionado"
             className={cn(
-              "inline-flex h-[var(--dash-control-h)] items-center gap-2 whitespace-nowrap border px-3 text-[10.5px] uppercase tracking-[0.1em] transition-colors sm:px-4",
+              "inline-flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap border-l border-[var(--top-rule)] px-3 text-[9px] uppercase tracking-[0.12em] transition-colors sm:px-4",
               copiedDeepen
-                ? "border-[var(--lime-ink)] bg-[var(--paper)] text-[var(--lime-ink)]"
-                : "border-[var(--ink-faint)] bg-[var(--paper-alt)] text-[var(--ink)] hover:border-[var(--ink)]",
+                ? "bg-transparent text-[var(--top-lime)]"
+                : "bg-transparent text-[var(--top-ink-3)] hover:bg-[rgba(245,244,231,0.03)] hover:text-[var(--top-ink)]",
             )}
             style={{ fontFamily: MONO_FONT }}
           >
@@ -117,7 +144,7 @@ export function Topbar({
             type="button"
             onClick={onList}
             title="Listar"
-            className="inline-flex h-[var(--dash-control-h)] items-center gap-2 whitespace-nowrap border border-[var(--ink-faint)] bg-transparent px-3 text-[10.5px] uppercase tracking-[0.1em] text-[var(--ink)] transition-colors hover:border-[var(--ink)] hover:bg-[var(--paper-alt)] sm:px-4"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap border-l border-[var(--top-rule)] bg-transparent px-3 text-[9px] uppercase tracking-[0.12em] text-[var(--top-ink-3)] transition-colors hover:bg-[rgba(245,244,231,0.03)] hover:text-[var(--top-ink)] sm:px-4"
             style={{ fontFamily: MONO_FONT }}
           >
             <List size={14} strokeWidth={1.75} />
@@ -127,20 +154,20 @@ export function Topbar({
       </div>
 
       <div
-        className="flex min-h-[32px] flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--rule-soft)] px-4 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--ink-dim)] sm:gap-x-5 sm:px-6"
+        className="flex min-h-8 items-center gap-x-3 overflow-hidden border-t border-[var(--top-rule-soft)] px-4 text-[9px] uppercase tracking-[0.16em] text-[var(--top-ink-dim)] sm:gap-x-5 sm:px-6"
         style={{ fontFamily: MONO_FONT }}
       >
-        <span className="flex min-w-0 items-center gap-2 text-[var(--ink)]">
-          <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-[var(--lime-ink)] [animation:cleanPulse_2.2s_ease-out_infinite]" />
-          <span className="truncate">Selecionado · {selectedTitle}</span>
+        <span className="flex min-w-0 items-center gap-2 text-[var(--top-ink)]">
+          <span className="relative inline-block h-1.5 w-1.5 shrink-0 bg-[var(--top-lime)] [animation:cleanPulse_2.2s_ease-out_infinite]" />
+          <span className="truncate">{source === "sinkra-maps" ? "Mapa" : "Selecionado"} · {selectedTitle}</span>
         </span>
-        <span className="hidden text-[var(--ink-faint)] sm:inline">/</span>
-        <span className="hidden truncate sm:inline">
-          slug · <strong className="font-medium text-[var(--ink)]">{selectedSlug}</strong>
+        <span className="hidden text-[var(--top-ink-faint)] sm:inline">/</span>
+        <span className={cn("hidden min-w-0 truncate sm:inline", source === "sinkra-maps" && "lg:inline")}>
+          slug · <strong className="font-medium text-[var(--top-ink)]">{selectedSlug}</strong>
         </span>
-        <span className="hidden text-[var(--ink-faint)] md:inline">/</span>
-        <span className="hidden md:inline">
-          schema · <strong className="font-medium text-[var(--ink)]">{selectedSchema}</strong>
+        <span className="hidden text-[var(--top-ink-faint)] md:inline">/</span>
+        <span className={cn("hidden shrink-0 md:inline", source === "sinkra-maps" && "hidden xl:inline")}>
+          schema · <strong className="font-medium text-[var(--top-ink)]">{selectedSchema}</strong>
         </span>
         <span className="ml-auto shrink-0">{selectedDate}</span>
       </div>

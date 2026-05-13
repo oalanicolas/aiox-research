@@ -41,6 +41,31 @@
   --bb-accent-rgb: 209, 255, 0;
   --bb-error: oklch(0.6368 0.2078 25.33);
 
+  --aiox-lime: #d1ff00;
+  --aiox-dark: #050505;
+  --aiox-void: #000000;
+  --aiox-surface: #0f0f11;
+  --aiox-surface-alt: #1c1e19;
+  --aiox-surface-deep: #0a0a0c;
+  --aiox-surface-hover: #1e1f22;
+  --aiox-cream: rgb(244, 244, 232);
+  --aiox-cream-alt: rgb(245, 244, 231);
+  --aiox-fg-2: rgba(244, 244, 232, 0.7);
+  --aiox-fg-3: rgba(244, 244, 232, 0.55);
+  --aiox-fg-dim: rgba(245, 244, 231, 0.4);
+  --aiox-border: rgba(156, 156, 156, 0.15);
+  --aiox-border-soft: rgba(156, 156, 156, 0.1);
+  --aiox-border-strong: rgba(156, 156, 156, 0.25);
+  --aiox-lime-05: rgba(209, 255, 0, 0.05);
+  --aiox-lime-10: rgba(209, 255, 0, 0.1);
+  --aiox-lime-25: rgba(209, 255, 0, 0.25);
+  --aiox-lime-glow: rgba(209, 255, 0, 0.25);
+  --aiox-lime-glow-soft: rgba(209, 255, 0, 0.1);
+  --aiox-blue: #0099ff;
+  --aiox-error: #ef4444;
+  --aiox-warning: #f59e0b;
+  --aiox-ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+
   --dash-control-h: 34px;
   --dash-header-h: 44px;
   --dash-sidebar-w: 340px;
@@ -73,6 +98,80 @@ select {
   font: inherit;
 }
 
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: default;
+}
+
 a {
   color: inherit;
+}
+
+.aiox-grid-lines {
+  background-image: linear-gradient(to right, var(--aiox-border) 1px, transparent 1px);
+  background-size: 25% 100%;
+}
+
+.aiox-hud-frame {
+  position: relative;
+  border: 1px solid var(--aiox-border);
+}
+
+.aiox-hud-frame::before,
+.aiox-hud-frame::after {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  content: "";
+  border: 1px solid var(--aiox-lime);
+  pointer-events: none;
+}
+
+.aiox-hud-frame::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.aiox-hud-frame::after {
+  right: -1px;
+  bottom: -1px;
+  border-top: 0;
+  border-left: 0;
+}
+
+.aiox-surface-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--aiox-border);
+  background: var(--aiox-surface);
+  transition: border-color 0.2s var(--aiox-ease-smooth), background-color 0.2s var(--aiox-ease-smooth);
+}
+
+.aiox-surface-card::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  content: "";
+  background: var(--aiox-lime);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--aiox-ease-smooth);
+}
+
+.aiox-surface-card:hover {
+  border-color: var(--aiox-border-strong);
+  background: var(--aiox-surface-hover);
+}
+
+.aiox-surface-card:hover::after {
+  transform: scaleX(1);
 }

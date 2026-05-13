@@ -55,9 +55,11 @@ import { Topbar } from "./organisms/topbar"
  */
 export function Observatory({
   data,
+  availableSources,
   basePath = "/observatory",
 }: {
   data: ObservatoryData
+  availableSources?: Array<[ObservatorySource, string]>
   basePath?: string
 }) {
   const router = useRouter()
@@ -246,8 +248,12 @@ export function Observatory({
     (file: string) => {
       setSelectedFile(file)
       setMode("document")
+      const params = new URLSearchParams(searchParams?.toString() ?? "")
+      params.set("file", file)
+      params.set("view", "document")
+      router.push(`${basePath}/${data.source}?${params.toString()}`)
     },
-    [],
+    [basePath, data.source, router, searchParams],
   )
 
   const navigateFile = useCallback(
@@ -404,6 +410,7 @@ export function Observatory({
         selectedTitle={data.selectedRun.displayTitle}
         selectedDate={data.selectedRun.date}
         selectedSchema={data.selectedRun.schema}
+        availableSources={availableSources}
         onChangeSource={(next) => pushUrl({ source: next })}
         onCopyNew={onCopyNew}
         onCopyDeepen={onCopyDeepen}
@@ -498,6 +505,7 @@ export function Observatory({
             }
           />
           <ReaderBody
+            source={data.source}
             mode={mode}
             content={selectedContent}
             file={selectedDocument.file}

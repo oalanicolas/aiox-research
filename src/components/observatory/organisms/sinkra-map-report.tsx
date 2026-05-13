@@ -17,22 +17,25 @@ import { LightScrollArea } from "../molecules/light-scroll-area"
 
 type Tone = "neutral" | "good" | "warn" | "danger"
 type SinkraPilotMap = NonNullable<NonNullable<ObservatoryTypeSpecific["sinkra"]>["observatoryMap"]>
+type SinkraCompliance = NonNullable<ObservatoryTypeSpecific["sinkra"]>["compliance"]
+type SinkraScoreBreakdownItem = SinkraCompliance["scoreBreakdown"][number]
+type SinkraRemediationItem = SinkraCompliance["remediationItems"][number]
 
 const SINKRA_DARK_THEME = {
-  "--paper": "#050505",
-  "--paper-alt": "#0f0f11",
-  "--paper-deep": "#171719",
-  "--ink": "#f5f4e7",
+  "--paper": "var(--aiox-dark, #050505)",
+  "--paper-alt": "var(--aiox-surface, #0f0f11)",
+  "--paper-deep": "var(--aiox-surface-hover, #171719)",
+  "--ink": "var(--aiox-cream-alt, #f5f4e7)",
   "--ink-2": "rgba(245, 244, 231, 0.74)",
   "--ink-3": "rgba(245, 244, 231, 0.48)",
   "--ink-dim": "rgba(245, 244, 231, 0.3)",
   "--ink-faint": "rgba(245, 244, 231, 0.16)",
-  "--rule": "rgba(245, 244, 231, 0.13)",
-  "--rule-soft": "rgba(245, 244, 231, 0.08)",
-  "--rule-strong": "rgba(245, 244, 231, 0.26)",
-  "--lime-ink": "#d1ff00",
-  "--lime-fill": "#d1ff00",
-  "--warning-ink": "#ef4444",
+  "--rule": "var(--aiox-border, rgba(245, 244, 231, 0.13))",
+  "--rule-soft": "var(--aiox-border-soft, rgba(245, 244, 231, 0.08))",
+  "--rule-strong": "var(--aiox-border-strong, rgba(245, 244, 231, 0.26))",
+  "--lime-ink": "var(--aiox-lime, #d1ff00)",
+  "--lime-fill": "var(--aiox-lime, #d1ff00)",
+  "--warning-ink": "var(--aiox-error, #ef4444)",
 } as CSSProperties
 
 function shortText(value: string, max = 180) {
@@ -106,6 +109,15 @@ function humanizeProcessLabel(value: string) {
     .replace(/_/g, " ")
     .replace(/-/g, " ")
     .replace(/\b\w/g, (match) => match.toUpperCase())
+}
+
+function humanizeSentence(value: string) {
+  const text = humanizeProcessLabel(value)
+    .replace(/\bAtm\b/g, "")
+    .replace(/\bQG\b/g, "Gate")
+    .replace(/\s+/g, " ")
+    .trim()
+  return text || "Etapa sem descrição humana"
 }
 
 function summarizeExecutors(values: string[]) {
@@ -740,43 +752,20 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
   ]
 
   return (
-    <section className="overflow-hidden bg-[#050505] text-[#f5f4e7]">
-      <div className="sticky top-0 z-10 border-b border-[#f5f4e7]/10 bg-[#050505]/95 px-5 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="grid h-8 w-8 place-items-center bg-[#d1ff00] text-[16px] font-black text-[#231d05]" style={{ fontFamily: DISPLAY_FONT }}>
-              C
-            </span>
-            <span className="text-[11px] uppercase tracking-[0.18em] text-[#f5f4e7]/70" style={{ fontFamily: MONO_FONT }}>
-              C-Level · Operating Model · SINKRA QA
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[#ef4444]" style={{ fontFamily: MONO_FONT }}>
-            <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
-            {vetoActive ? "auto-fail ativo" : "produção liberável"}
-          </div>
-        </div>
-      </div>
-
-      <div className="border-b border-[#f5f4e7]/10 px-5 py-8">
-        <div className="mb-5 flex items-center justify-between gap-5 border-b border-[#d1ff00] pb-3">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center bg-[#d1ff00] text-[20px] font-black text-[#231d05]" style={{ fontFamily: DISPLAY_FONT }}>0</span>
-            <span className="text-[11px] uppercase tracking-[0.22em] text-[#d1ff00]" style={{ fontFamily: MONO_FONT }}>TL;DR · 60 segundos</span>
-          </div>
-          <span className="hidden text-[10px] uppercase tracking-[0.14em] text-[#f5f4e7]/42 sm:block" style={{ fontFamily: MONO_FONT }}>
-            se você só tem 1 min · leia esta faixa
-          </span>
-        </div>
+    <section className="aiox-grid-lines overflow-hidden bg-[#050505] text-[#f5f4e7]">
+      <div className="border-b border-[#f5f4e7]/10 px-5 py-5">
         <div className="grid gap-px bg-[#f5f4e7]/10 md:grid-cols-2 xl:grid-cols-6">
           {tldrCards.map((item, index) => (
-            <DarkTldr key={item.label} label={`${String(index + 1).padStart(2, "0")} · ${item.label}`} value={item.value} note={`${item.pin} · ${item.note}`} tone={item.tone} />
+            <DarkTldr key={item.label} label={`[${String(index + 1).padStart(2, "0")}] · ${item.label}`} value={item.value} note={`${item.pin} · ${item.note}`} tone={item.tone} />
           ))}
         </div>
       </div>
-
       <div className="grid gap-px bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,1.55fr)_420px]">
-        <div className="bg-[#050505] px-6 py-10 sm:px-8 sm:py-14">
+        <div className="relative overflow-hidden bg-[#050505] px-6 py-10 sm:px-8 sm:py-14">
+          <div className="pointer-events-none absolute -right-8 top-3 text-[90px] font-black leading-none tracking-[-0.08em] text-[#3d3d3d]/35 sm:text-[140px]" style={{ fontFamily: DISPLAY_FONT }}>
+            MAP
+          </div>
+          <div className="relative">
           <div className="mb-5 flex flex-wrap gap-2">
             <DarkPin label="SINKRA QA" />
             <DarkPin label={compliance?.status || "status --"} tone={vetoActive ? "danger" : "good"} />
@@ -791,9 +780,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
           <p className="mt-6 max-w-[780px] text-[18px] leading-[1.58] text-[#f5f4e7]/62">
             {pilot.headline || pilot.decision}
           </p>
+          </div>
         </div>
 
-        <aside className="grid content-between gap-4 bg-[#101010] p-6 sm:p-8">
+        <aside className="aiox-hud-frame grid content-between gap-4 bg-[#101010] p-6 sm:p-8">
           <div className="grid gap-3">
             <DarkStat label="Compliance score" value={`${compliance?.currentScore ?? sinkra?.score.score ?? "--"}/100`} tone={vetoActive ? "warn" : "good"} />
             <DarkStat label="Critical blocker" value={p0?.dimension || "—"} tone={p0 ? "danger" : "good"} />
@@ -845,7 +835,7 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
       <div className="grid gap-px bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
         <div className="bg-[#0f0f11] p-5">
           <ReportBlockMarker index="01" label="Axiomas e score" meta={`${criticalRisks} riscos críticos`} />
-          <DarkSectionTitle eyebrow="Score breakdown" title="Critérios que explicam o veto" />
+          <DarkSectionTitle eyebrow="scorecard" title="Critérios que explicam o veto" />
           <div className="mt-5 grid gap-3">
             {scoreBreakdown.map((item) => (
               <DarkScoreRow key={item.id} label={item.label} score={item.score} max={item.max} maxScale={maxScore} findings={item.findings} />
@@ -854,10 +844,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
         </div>
 
         <div className="bg-[#0f0f11] p-5">
-          <DarkSectionTitle eyebrow="Runtime economics" title="Custo, tokens e duração" />
+          <DarkSectionTitle eyebrow="custo de execução" title="Custo, tokens e duração" />
           <div className="mt-5 grid gap-4">
             {metrics.map((metric) => (
-              <article key={metric.phase} className="border border-[#f5f4e7]/10 bg-[#050505] p-4">
+              <article key={metric.phase} className="aiox-surface-card bg-[#050505] p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h4 className="truncate text-[16px] font-black text-[#f5f4e7]">{phaseLabel(metric.phase)}</h4>
@@ -877,8 +867,17 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
         </div>
       </div>
 
+      <div className="grid gap-px border-t border-[#f5f4e7]/10 bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.86fr)]">
+        <DarkRadarPanel
+          title="Radar de maturidade operacional"
+          items={scoreBreakdown}
+          emptySchema="score_card.yaml deve declarar dimensões, score, max, status e findings para alimentar este radar."
+        />
+        <DarkRiskRegister risks={pilot.risks} remediation={remediation} p0={p0} />
+      </div>
+
       <div className="border-y border-[#f5f4e7]/10 px-5 py-12">
-        <ReportBlockMarker index="02" label="Visual intelligence lab" meta="gráficos-alvo para evoluir o mapeamento" />
+        <ReportBlockMarker index="02" label="Inteligência visual" meta="gráficos-alvo para evoluir o mapeamento" />
         <h3 className="mt-5 max-w-[980px] text-[34px] font-black leading-[0.98] tracking-[-0.045em] text-[#f5f4e7] sm:text-[48px] lg:text-[58px]" style={{ fontFamily: DISPLAY_FONT }}>
           O painel deve revelar padrões, <span className="text-[#d1ff00]">não só listar arquivos.</span>
         </h3>
@@ -949,7 +948,8 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
 
       <div className="grid gap-px bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
         <div className="bg-[#050505] p-5">
-          <DarkSectionTitle eyebrow="Remediation gantt" title="Quando o veto sai" />
+          <DarkSectionTitle eyebrow="roadmap de remediação" title="Quando o veto sai" />
+          <DarkRoadmapSummary remediation={remediation} vetoActive={vetoActive} />
           <div className="mt-5 overflow-x-auto border border-[#f5f4e7]/10">
             <div className="min-w-[720px]">
             <div className="grid grid-cols-[220px_repeat(7,minmax(56px,1fr))] border-b border-[#f5f4e7]/10 bg-[#161618] text-[10px] uppercase tracking-[0.12em] text-[#f5f4e7]/45" style={{ fontFamily: MONO_FONT }}>
@@ -984,7 +984,7 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
         </div>
 
         <div className="bg-[#050505] p-5">
-          <DarkSectionTitle eyebrow="Three acts" title="Narrativa do veto" />
+          <DarkSectionTitle eyebrow="três atos" title="Narrativa do veto" />
           <div className="mt-5 grid gap-3">
             <DarkAct index="01" title="Onde estamos" stat={compliance?.handoffBlocked ? "VETO" : "OK"} body="Score estrutural forte, mas produção bloqueada por governança/tokenização." tone="danger" />
             <DarkAct index="02" title="O que fazer" stat={String(remediation.length)} body={p0?.action || "Executar remediação priorizada."} tone="warn" />
@@ -995,10 +995,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
 
       <div className="grid gap-px bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="bg-[#0f0f11] p-5">
-          <DarkSectionTitle eyebrow="Decision matrix" title="O que o mapa responde" />
+          <DarkSectionTitle eyebrow="matriz de decisão" title="O que o mapa responde" />
           <div className="mt-5 grid gap-3">
             {pilot.decisionMatrix.map((decision) => (
-              <article key={decision.question} className="grid gap-4 border border-[#f5f4e7]/10 bg-[#050505] p-4 md:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)]">
+              <article key={decision.question} className="aiox-surface-card grid gap-4 bg-[#050505] p-4 md:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)]">
                 <div className="text-[11px] uppercase tracking-[0.12em] text-[#f5f4e7]/42" style={{ fontFamily: MONO_FONT }}>
                   {decision.question}
                 </div>
@@ -1014,10 +1014,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
         </div>
 
         <div className="bg-[#0f0f11] p-5">
-          <DarkSectionTitle eyebrow="Readiness radar" title="Onde está pronto e onde bloqueia" />
+          <DarkSectionTitle eyebrow="radar de prontidão" title="Onde está pronto e onde bloqueia" />
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {pilot.readinessBars.map((bar) => (
-              <article key={bar.label} className="border border-[#f5f4e7]/10 bg-[#050505] p-4">
+              <article key={bar.label} className="aiox-surface-card bg-[#050505] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h4 className="text-[16px] font-black text-[#f5f4e7]">{bar.label}</h4>
@@ -1042,10 +1042,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
       </div>
 
       <div className="bg-[#050505] p-5">
-        <DarkSectionTitle eyebrow="Critical path" title="Sequência mínima para operar" />
+        <DarkSectionTitle eyebrow="caminho crítico" title="Sequência mínima para operar" />
         <div className="mt-5 grid gap-3 lg:grid-cols-5">
           {pilot.criticalPath.map((step, index) => (
-            <article key={step.task} className="border border-[#f5f4e7]/10 bg-[#0f0f11] p-4">
+            <article key={step.task} className="aiox-surface-card p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[24px] font-black leading-none text-[#f5f4e7]/28" style={{ fontFamily: DISPLAY_FONT }}>
                   {String(index + 1).padStart(2, "0")}
@@ -1066,7 +1066,7 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
 
       <div className="grid gap-px bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.75fr)]">
         <div className="bg-[#0f0f11] p-5">
-          <DarkSectionTitle eyebrow="Executor mix" title="Carga operacional por executor" />
+          <DarkSectionTitle eyebrow="mix de execução" title="Carga operacional por executor" />
           <div className="mt-5 h-5 overflow-hidden bg-[#f5f4e7]/8">
             {pilot.executorMix.map((item) => (
               <div
@@ -1079,7 +1079,7 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {pilot.executorMix.map((item) => (
-              <article key={item.executor} className="border border-[#f5f4e7]/10 bg-[#050505] p-4">
+              <article key={item.executor} className="aiox-surface-card bg-[#050505] p-4">
                 <div className={cn("text-[42px] font-black leading-none", item.tone === "warn" ? "text-[#ef4444]" : item.tone === "good" ? "text-[#d1ff00]" : "text-[#f5f4e7]")} style={{ fontFamily: DISPLAY_FONT }}>
                   {item.tasks}
                 </div>
@@ -1092,7 +1092,7 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
         </div>
 
         <div className="bg-[#0f0f11] p-5">
-          <DarkSectionTitle eyebrow="Gate board" title="Controles de qualidade" />
+          <DarkSectionTitle eyebrow="gates de qualidade" title="Controles de qualidade" />
           <div className="mt-5 grid gap-2">
             {pilot.gateBoard.map((gate) => (
               <article key={gate.id} className={cn("grid grid-cols-[minmax(0,1fr)_74px] gap-3 border p-3", gate.status === "PASS" ? "border-[#d1ff00]/20 bg-[#050505]" : "border-[#ef4444]/35 bg-[#120808]")}>
@@ -1113,10 +1113,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
 
       <div className="grid gap-px bg-[#f5f4e7]/10 xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
         <div className="bg-[#050505] p-5">
-          <DarkSectionTitle eyebrow="Operating lanes" title="Fluxo executivo do processo" />
+          <DarkSectionTitle eyebrow="linhas operacionais" title="Fluxo executivo do processo" />
           <div className="mt-5 grid gap-3">
             {pilot.lanes.map((lane, index) => (
-              <article key={lane.id} className="grid gap-4 border border-[#f5f4e7]/10 bg-[#0f0f11] p-4 md:grid-cols-[52px_minmax(0,1fr)_82px]">
+              <article key={lane.id} className="aiox-surface-card grid gap-4 p-4 md:grid-cols-[52px_minmax(0,1fr)_82px]">
                 <div className="text-[28px] font-black leading-none text-[#f5f4e7]/28" style={{ fontFamily: DISPLAY_FONT }}>
                   {String(index + 1).padStart(2, "0")}
                 </div>
@@ -1139,7 +1139,7 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
 
         <div className="grid gap-px bg-[#f5f4e7]/10">
           <div className="bg-[#0f0f11] p-5">
-            <DarkSectionTitle eyebrow="Risk register" title="Bloqueios reais" />
+            <DarkSectionTitle eyebrow="registro de riscos" title="Bloqueios reais" />
             <div className="mt-5 grid gap-3">
               {pilot.risks.map((risk) => (
                 <article key={risk.id} className="border border-[#ef4444]/35 bg-[#120808] p-4">
@@ -1153,10 +1153,10 @@ function ExecutiveDarkDeck({ pilot, sinkra }: { pilot: SinkraPilotMap; sinkra?: 
             </div>
           </div>
           <div className="bg-[#0f0f11] p-5">
-            <DarkSectionTitle eyebrow="Next actions" title="Fila de correção" />
+            <DarkSectionTitle eyebrow="próximas ações" title="Fila de correção" />
             <div className="mt-5 grid gap-2">
               {pilot.nextActions.map((action) => (
-                <article key={`${action.priority}-${action.title}`} className="grid grid-cols-[48px_minmax(0,1fr)] gap-3 border border-[#f5f4e7]/10 bg-[#050505] p-3">
+                <article key={`${action.priority}-${action.title}`} className="aiox-surface-card grid grid-cols-[48px_minmax(0,1fr)] gap-3 bg-[#050505] p-3">
                   <span className={cn("text-[15px] font-black", action.priority === "P0" ? "text-[#ef4444]" : action.priority === "P1" ? "text-[#f5b340]" : "text-[#d1ff00]")}>{action.priority}</span>
                   <div className="min-w-0">
                     <h4 className="text-[14px] font-black leading-tight text-[#f5f4e7]">{action.title}</h4>
@@ -1551,6 +1551,13 @@ export function SinkraFlowReport({ sinkra }: { sinkra?: ObservatoryTypeSpecific[
           adjacency={composition?.adjacencyValidation || "--"}
         />
 
+        <FlowHumanBrief
+          lanes={pilot?.lanes ?? []}
+          workflows={workflows}
+          dependencies={dependencies}
+          tokenCount={tokenFlow?.tokens.length ?? 0}
+        />
+
         {playbook && (
           <section className="mt-6 border border-[var(--ink)] bg-[var(--paper)]">
           <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--rule)] bg-[var(--paper-alt)] p-5">
@@ -1818,15 +1825,19 @@ export function SinkraAutomationReport({ sinkra }: { sinkra?: ObservatoryTypeSpe
                 const auto = item.automatability ?? 0
                 const std = item.standardization ?? 0
                 const tone: Tone = item.dependsOnGaps.length > 0 ? "warn" : auto >= 0.85 ? "good" : "neutral"
+                const taskLabel = humanizeSentence(item.taskName || item.taskId)
                 return (
                   <article key={item.taskId} className="grid gap-4 bg-[var(--paper)] p-4 lg:grid-cols-[minmax(240px,1fr)_180px_180px]">
                     <div className="min-w-0">
                       <div className="text-[10.5px] uppercase tracking-[0.1em] text-[var(--ink-3)]" style={{ fontFamily: MONO_FONT }}>
-                        {item.taskId} · {item.executorType} · {item.automationType}
+                        {humanizeSentence(item.executorType)} · {humanizeSentence(item.automationType)}
                       </div>
                       <h4 className="mt-1 text-[19px] font-black leading-tight tracking-[-0.025em] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT }}>
-                        {item.taskName}
+                        {taskLabel}
                       </h4>
+                      <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[var(--ink-dim)]" style={{ fontFamily: MONO_FONT }}>
+                        {item.taskId}
+                      </div>
                       <p className="mt-2 line-clamp-2 text-[14px] leading-[1.45] text-[var(--ink-2)]">{item.justification || item.impact}</p>
                       {item.dependsOnGaps.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -1886,18 +1897,18 @@ function FlowExecutiveStrip({
   const steps = lanes.length > 0
     ? lanes.map((lane, index) => ({
         id: lane.id,
-        title: lane.title,
-        meta: `${lane.owner} · ${lane.taskCount} tasks`,
-        body: lane.signal || lane.summary,
+        title: humanizeSentence(lane.title),
+        meta: `${humanizeSentence(lane.owner)} · ${lane.taskCount} tarefas`,
+        body: humanizeSentence(lane.signal || lane.summary),
         value: lane.taskCount,
         tone: lane.risk ? "warn" as Tone : "good" as Tone,
         index,
       }))
     : workflows.flatMap((workflow) => workflow.steps.map((step, index) => ({
         id: `${workflow.id}-${step.id}`,
-        title: step.name,
-        meta: `${workflow.id} · ${step.executor}`,
-        body: `${step.outputCount} outputs · ${step.guardrailCount} guardrails`,
+        title: humanizeSentence(step.name),
+        meta: `${humanizeSentence(workflow.name || workflow.id)} · ${humanizeSentence(step.executor)}`,
+        body: `${step.outputCount} entregas · ${step.guardrailCount} controles`,
         value: step.outputCount + step.guardrailCount,
         tone: step.guardrailCount > 0 ? "good" as Tone : "warn" as Tone,
         index,
@@ -1909,7 +1920,7 @@ function FlowExecutiveStrip({
     <section className="mt-6 border border-[#f5f4e7]/12 bg-[#050505]">
       <div className="grid gap-px bg-[#f5f4e7]/10 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="bg-[#0f0f11] p-5">
-          <ReportBlockMarker index="01" label="Operating journey" meta={`${steps.length} etapas visualizadas`} />
+          <ReportBlockMarker index="01" label="Jornada operacional" meta={`${steps.length} etapas visualizadas`} />
           <div className="mt-6 overflow-x-auto pb-2">
             <div className="grid min-w-[980px] auto-cols-fr grid-flow-col gap-px bg-[#f5f4e7]/10">
               {steps.slice(0, 8).map((step) => (
@@ -1936,7 +1947,7 @@ function FlowExecutiveStrip({
           </div>
         </div>
         <aside className="bg-[#10110d] p-5">
-          <DarkSectionTitle eyebrow="Flow contract" title="O que precisa existir" />
+          <DarkSectionTitle eyebrow="Contrato do fluxo" title="O que precisa existir" />
           <div className="mt-5 grid gap-3">
             <DarkStat label="DAG nodes" value={String(nodes)} tone={nodes > 0 ? "good" : "warn"} />
             <DarkStat label="Roots / leaves" value={`${roots}/${leaves}`} />
@@ -1950,6 +1961,74 @@ function FlowExecutiveStrip({
           </div>
         </aside>
       </div>
+    </section>
+  )
+}
+
+function FlowHumanBrief({
+  lanes,
+  workflows,
+  dependencies,
+  tokenCount,
+}: {
+  lanes: SinkraPilotMap["lanes"]
+  workflows: NonNullable<ObservatoryTypeSpecific["sinkra"]>["workflows"]
+  dependencies?: NonNullable<ObservatoryTypeSpecific["sinkra"]>["dependencies"]
+  tokenCount: number
+}) {
+  const laneCount = lanes.length || workflows.length
+  const taskCount = lanes.reduce((total, lane) => total + lane.taskCount, 0) ||
+    workflows.reduce((total, workflow) => total + workflow.steps.length, 0)
+  const roots = dependencies?.roots.length ?? 0
+  const leaves = dependencies?.leaves.length ?? 0
+  const nodes = dependencies?.nodes.length ?? taskCount
+  const cards = [
+    {
+      title: "Como começa",
+      metric: roots > 0 ? `${roots} entrada${roots === 1 ? "" : "s"}` : "entrada pendente",
+      body: roots > 0
+        ? "O processo tem pontos claros de início. Isso reduz ambiguidade para disparo, triagem e ownership."
+        : "Ainda falta declarar quais eventos ou decisões realmente iniciam o fluxo.",
+      tone: roots > 0 ? "good" as Tone : "warn" as Tone,
+    },
+    {
+      title: "Como atravessa",
+      metric: `${laneCount} blocos · ${nodes} nós`,
+      body: taskCount > 0
+        ? "A leitura principal deve mostrar a passagem entre etapas, controles e handoffs, não apenas IDs de tasks."
+        : "Faltam atividades suficientes para transformar este mapa em jornada operacional.",
+      tone: taskCount > 0 ? "good" as Tone : "warn" as Tone,
+    },
+    {
+      title: "Como termina",
+      metric: leaves > 0 ? `${leaves} saída${leaves === 1 ? "" : "s"}` : "saída pendente",
+      body: tokenCount > 0
+        ? "Há pacotes ou evidências que ajudam a provar conclusão e consumo pela próxima etapa."
+        : "O próximo ganho é declarar outputs consumíveis: arquivos, decisões, eventos, registros ou gates.",
+      tone: leaves > 0 && tokenCount > 0 ? "good" as Tone : "warn" as Tone,
+    },
+  ]
+
+  return (
+    <section className="mt-6 grid gap-px bg-[#f5f4e7]/10 md:grid-cols-3">
+      {cards.map((card, index) => (
+        <article key={card.title} className="bg-[#0f0f11] p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[#f5f4e7]/42" style={{ fontFamily: MONO_FONT }}>
+                leitura humana · {String(index + 1).padStart(2, "0")}
+              </p>
+              <h3 className="mt-2 text-[28px] font-black leading-none tracking-[-0.045em] text-[#f5f4e7]" style={{ fontFamily: DISPLAY_FONT }}>
+                {card.title}
+              </h3>
+            </div>
+            <span className={cn("text-[11px] uppercase tracking-[0.12em]", card.tone === "good" ? "text-[#d1ff00]" : "text-[#f5b340]")} style={{ fontFamily: MONO_FONT }}>
+              {card.metric}
+            </span>
+          </div>
+          <p className="mt-5 text-[15px] font-bold leading-[1.55] text-[#f5f4e7]/68">{card.body}</p>
+        </article>
+      ))}
     </section>
   )
 }
@@ -2001,7 +2080,7 @@ function AutomationDecisionBoard({
                   </div>
                 ) : visible.map((item) => (
                   <div key={item.taskId} className="border border-[#f5f4e7]/10 bg-[#050505] p-3">
-                    <div className="truncate text-[14px] font-black text-[#f5f4e7]">{item.taskName}</div>
+                    <div className="truncate text-[14px] font-black text-[#f5f4e7]">{humanizeSentence(item.taskName || item.taskId)}</div>
                     <div className="mt-1 text-[10px] uppercase tracking-[0.09em] text-[#f5f4e7]/38" style={{ fontFamily: MONO_FONT }}>
                       {item.taskId} · {pct(item.automatability ?? 0)}
                     </div>
@@ -2041,7 +2120,7 @@ function AutomationReadinessPanel({
         {(blocked.length > 0 ? blocked : automation).slice(0, 5).map((item) => (
           <article key={item.taskId} className="border border-[#f5f4e7]/10 bg-[#050505] p-3">
             <div className="flex items-start justify-between gap-3">
-              <h4 className="text-[14px] font-black leading-tight text-[#f5f4e7]">{item.taskName}</h4>
+              <h4 className="text-[14px] font-black leading-tight text-[#f5f4e7]">{humanizeSentence(item.taskName || item.taskId)}</h4>
               <span className={cn("text-[10px] uppercase tracking-[0.1em]", item.guardrailsMissing.length > 0 ? "text-[#ef4444]" : "text-[#d1ff00]")} style={{ fontFamily: MONO_FONT }}>
                 {item.guardrailsMissing.length > 0 ? "blocked" : "ready"}
               </span>
@@ -2709,12 +2788,9 @@ function DarkStat({ label, value, tone = "neutral" }: { label: string; value: st
 
 function ReportBlockMarker({ index, label, meta }: { index: string; label: string; meta: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 border-b border-[#d1ff00] pb-3">
-      <span className="grid h-10 w-10 place-items-center bg-[#d1ff00] text-[18px] font-black text-[#231d05]" style={{ fontFamily: DISPLAY_FONT }}>
-        {index}
-      </span>
+    <div className="flex flex-wrap items-center gap-4 border-b border-[var(--aiox-lime)] pb-3">
       <span className="text-[11px] uppercase tracking-[0.22em] text-[#d1ff00]" style={{ fontFamily: MONO_FONT }}>
-        {label}
+        [{index}] · {label}
       </span>
       <span className="ml-auto text-[10px] uppercase tracking-[0.14em] text-[#f5f4e7]/38" style={{ fontFamily: MONO_FONT }}>
         {meta}
@@ -2725,7 +2801,7 @@ function ReportBlockMarker({ index, label, meta }: { index: string; label: strin
 
 function DarkTldr({ label, value, note, tone = "neutral" }: { label: string; value: string; note: string; tone?: Tone }) {
   return (
-    <article className="bg-[#0f0f11] p-5 transition-colors hover:bg-[#161618]">
+    <article className="aiox-surface-card p-5">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[10px] uppercase tracking-[0.13em] text-[#f5f4e7]/42" style={{ fontFamily: MONO_FONT }}>{label}</span>
         <span className={cn("h-1.5 w-1.5 rounded-full", tone === "danger" ? "bg-[#ef4444]" : tone === "warn" ? "bg-[#f5b340]" : tone === "good" ? "bg-[#d1ff00]" : "bg-[#f5f4e7]/35")} />
@@ -2740,7 +2816,7 @@ function DarkTldr({ label, value, note, tone = "neutral" }: { label: string; val
 
 function DarkSignal({ label, value, tone = "neutral" }: { label: string; value: string; tone?: Tone }) {
   return (
-    <div className="bg-[#050505] px-4 py-3">
+    <div className="aiox-hud-frame bg-[#050505] px-4 py-3">
       <div className="text-[10px] uppercase tracking-[0.12em] text-[#f5f4e7]/38" style={{ fontFamily: MONO_FONT }}>{label}</div>
       <div className={cn("mt-1 text-[24px] font-black leading-none", tone === "danger" ? "text-[#ef4444]" : tone === "warn" ? "text-[#f5b340]" : tone === "good" ? "text-[#d1ff00]" : "text-[#f5f4e7]")} style={{ fontFamily: DISPLAY_FONT }}>
         {value}
@@ -2752,7 +2828,7 @@ function DarkSignal({ label, value, tone = "neutral" }: { label: string; value: 
 function DarkSectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <header>
-      <p className="text-[11px] uppercase tracking-[0.16em] text-[#d1ff00]" style={{ fontFamily: MONO_FONT }}>{eyebrow}</p>
+      <p className="text-[11px] uppercase tracking-[0.16em] text-[#d1ff00]" style={{ fontFamily: MONO_FONT }}>◤ {eyebrow}</p>
       <h3 className="mt-1 text-[30px] font-black leading-none tracking-[-0.05em] text-[#f5f4e7]" style={{ fontFamily: DISPLAY_FONT }}>
         {title}
       </h3>
@@ -2769,6 +2845,188 @@ function DarkBridge({ label }: { label: string }) {
           {label}
         </div>
       </div>
+    </div>
+  )
+}
+
+function scorePercent(item: SinkraScoreBreakdownItem) {
+  return Math.max(0, Math.min(100, ((item.score ?? 0) / Math.max(item.max ?? 100, 1)) * 100))
+}
+
+function DarkRadarPanel({
+  title,
+  items,
+  emptySchema,
+}: {
+  title: string
+  items: SinkraScoreBreakdownItem[]
+  emptySchema: string
+}) {
+  const realItems = items.filter((item) => item.score !== null)
+  const plotted = realItems.length >= 3
+    ? realItems.slice(0, 8)
+    : [
+        { id: "tokenizacao", label: "Tokenização", score: 58, max: 100, weight: null, status: "schema", findings: ["Declarar dimensões no score_card.yaml."] },
+        { id: "gates", label: "Gates", score: 72, max: 100, weight: null, status: "schema", findings: ["Declarar critérios de bloqueio e aceite."] },
+        { id: "evidencias", label: "Evidências", score: 46, max: 100, weight: null, status: "schema", findings: ["Conectar evidências aos gates."] },
+        { id: "automacao", label: "Automação", score: 64, max: 100, weight: null, status: "schema", findings: ["Declarar tarefas automatizáveis."] },
+        { id: "handoff", label: "Handoff", score: 52, max: 100, weight: null, status: "schema", findings: ["Declarar saída operacional."] },
+      ] satisfies SinkraScoreBreakdownItem[]
+  const cx = 180
+  const cy = 180
+  const radius = 116
+  const points = plotted.map((item, index) => {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / plotted.length
+    const ratio = scorePercent(item) / 100
+    return {
+      item,
+      pct: Math.round(ratio * 100),
+      x: cx + Math.cos(angle) * radius * ratio,
+      y: cy + Math.sin(angle) * radius * ratio,
+      ax: cx + Math.cos(angle) * radius,
+      ay: cy + Math.sin(angle) * radius,
+      lx: cx + Math.cos(angle) * (radius + 32),
+      ly: cy + Math.sin(angle) * (radius + 32),
+    }
+  })
+  const polygon = points.map((point) => `${point.x},${point.y}`).join(" ")
+
+  return (
+    <section className="aiox-hud-frame bg-[#050505] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <DarkSectionTitle eyebrow="Maturity radar" title={title} />
+        {realItems.length < 3 && <SchemaChip label="schema parcial" />}
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="grid place-items-center border border-[#f5f4e7]/10 bg-[#0f0f11] p-3">
+          <svg viewBox="0 0 360 360" className="h-[320px] w-full max-w-[360px]" role="img" aria-label={title}>
+            {[0.25, 0.5, 0.75, 1].map((ring) => (
+              <circle key={ring} cx={cx} cy={cy} r={radius * ring} fill="none" stroke="rgba(245,244,231,0.12)" strokeWidth="1" />
+            ))}
+            {points.map((point) => (
+              <line key={`${point.item.id}-axis`} x1={cx} y1={cy} x2={point.ax} y2={point.ay} stroke="rgba(245,244,231,0.10)" strokeWidth="1" />
+            ))}
+            <polygon points={polygon} fill="rgba(209,255,0,0.24)" stroke="#d1ff00" strokeWidth="2" />
+            {points.map((point) => (
+              <g key={point.item.id}>
+                <circle cx={point.x} cy={point.y} r="4.5" fill={scoreTone(point.item.score, point.item.max) === "danger" ? "#ef4444" : scoreTone(point.item.score, point.item.max) === "warn" ? "#f5b340" : "#d1ff00"} />
+                <text x={point.lx} y={point.ly} textAnchor={point.lx < cx ? "end" : point.lx > cx ? "start" : "middle"} dominantBaseline="middle" fill="rgba(245,244,231,0.58)" fontSize="10" fontFamily="monospace">
+                  {shortText(point.item.label, 16)}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+        <div className="grid content-start gap-3">
+          {plotted.map((item) => {
+            const tone = scoreTone(item.score, item.max)
+            const pctValue = scorePercent(item)
+            return (
+              <article key={item.id} className="aiox-surface-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h4 className="truncate text-[16px] font-black text-[#f5f4e7]">{item.label}</h4>
+                    <p className="mt-1 line-clamp-2 text-[13px] leading-[1.45] text-[#f5f4e7]/52">{item.findings[0] || "Sem finding detalhado."}</p>
+                  </div>
+                  <span className={cn("text-[28px] font-black leading-none", tone === "danger" ? "text-[#ef4444]" : tone === "warn" ? "text-[#f5b340]" : "text-[#d1ff00]")} style={{ fontFamily: DISPLAY_FONT }}>
+                    {item.score ?? "--"}
+                  </span>
+                </div>
+                <div className="mt-3 h-2 bg-[#f5f4e7]/8">
+                  <div className={cn("h-full", tone === "danger" ? "bg-[#ef4444]" : tone === "warn" ? "bg-[#f5b340]" : "bg-[#d1ff00]")} style={{ width: `${Math.max(3, pctValue)}%` }} />
+                </div>
+              </article>
+            )
+          })}
+          {realItems.length < 3 && (
+            <p className="border border-[#f5b340]/25 bg-[#f5b340]/8 p-3 text-[12px] font-bold leading-[1.5] text-[#f5b340]">
+              {emptySchema}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function DarkRiskRegister({
+  risks,
+  remediation,
+  p0,
+}: {
+  risks: SinkraPilotMap["risks"]
+  remediation: SinkraRemediationItem[]
+  p0?: SinkraRemediationItem
+}) {
+  const visibleRisks = risks.length > 0
+    ? risks.slice(0, 5)
+    : remediation.slice(0, 5).map((item, index) => ({
+        id: `remediation-${index}`,
+        title: item.dimension,
+        severity: item.priority === "P0" ? "critical" : item.priority === "P1" ? "high" : "medium",
+        evidence: item.finding,
+        action: item.action,
+      }))
+  const blockers = visibleRisks.filter((risk) => /critical|high|p0|p1/i.test(risk.severity)).length
+
+  return (
+    <section className="aiox-hud-frame bg-[#050505] p-5">
+      <div className="flex items-start justify-between gap-4">
+        <DarkSectionTitle eyebrow="Risk register" title="Riscos que mudam a decisão" />
+        <span className={cn("text-[34px] font-black leading-none", blockers > 0 ? "text-[#ef4444]" : "text-[#d1ff00]")} style={{ fontFamily: DISPLAY_FONT }}>
+          {blockers}
+        </span>
+      </div>
+      <div className="mt-6 grid gap-3">
+        {visibleRisks.map((risk, index) => {
+          const danger = /critical|p0/i.test(risk.severity)
+          const warn = !danger && /high|p1/i.test(risk.severity)
+          return (
+            <article key={`${risk.title}-${index}`} className="aiox-surface-card grid gap-4 p-4 md:grid-cols-[96px_minmax(0,1fr)]">
+              <div>
+                <div className={cn("text-[22px] font-black uppercase leading-none", danger ? "text-[#ef4444]" : warn ? "text-[#f5b340]" : "text-[#d1ff00]")} style={{ fontFamily: DISPLAY_FONT }}>
+                  {danger ? "P0" : warn ? "P1" : "P2"}
+                </div>
+                <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-[#f5f4e7]/38" style={{ fontFamily: MONO_FONT }}>
+                  {risk.severity}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-[18px] font-black leading-tight text-[#f5f4e7]">{risk.title}</h4>
+                <p className="mt-2 text-[14px] leading-[1.52] text-[#f5f4e7]/58">{risk.evidence}</p>
+                <div className="mt-3 border-l-2 border-[#d1ff00] pl-3 text-[13px] font-bold leading-[1.5] text-[#d1ff00]">
+                  {risk.action || p0?.action || "Declarar ação corretiva e dono operacional."}
+                </div>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function DarkRoadmapSummary({
+  remediation,
+  vetoActive,
+}: {
+  remediation: SinkraRemediationItem[]
+  vetoActive: boolean
+}) {
+  const p0Count = remediation.filter((item) => item.priority === "P0").length
+  const p1Count = remediation.filter((item) => item.priority === "P1").length
+  const p2Count = remediation.length - p0Count - p1Count
+  const estimatedWeeks = remediation.reduce((max, item) => {
+    const timing = remediationWeeks(item.priority, item.action)
+    return Math.max(max, timing.start + timing.span)
+  }, 0)
+
+  return (
+    <div className="mt-5 grid gap-px bg-[#f5f4e7]/10 sm:grid-cols-4">
+      <DarkSignal label="P0 bloqueia" value={String(p0Count)} tone={p0Count > 0 ? "danger" : "good"} />
+      <DarkSignal label="P1 estabiliza" value={String(p1Count)} tone={p1Count > 0 ? "warn" : "good"} />
+      <DarkSignal label="Backlog P2" value={String(Math.max(0, p2Count))} tone="neutral" />
+      <DarkSignal label="ETA realista" value={estimatedWeeks > 0 ? `S+${estimatedWeeks}` : vetoActive ? "definir" : "ok"} tone={vetoActive ? "warn" : "good"} />
     </div>
   )
 }
@@ -2791,7 +3049,7 @@ function DarkDonut({
   const pctValue = value === null ? 24 : Math.max(0, Math.min(100, value))
   const color = tone === "danger" ? "#ef4444" : tone === "warn" ? "#f5b340" : "#d1ff00"
   return (
-    <article className="bg-[#0f0f11] p-5">
+    <article className="aiox-surface-card p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-[10px] uppercase tracking-[0.14em] text-[#f5f4e7]/42" style={{ fontFamily: MONO_FONT }}>{label}</div>
@@ -2840,9 +3098,9 @@ function DarkQuadrant({
         { label: "blocked", x: 68, y: 42, tone: "danger" as Tone },
       ]
   return (
-    <section className="bg-[#0f0f11] p-5">
+    <section className="aiox-hud-frame bg-[#0f0f11] p-5">
       <div className="flex items-start justify-between gap-4">
-        <DarkSectionTitle eyebrow="Automation x standardization" title={title} />
+        <DarkSectionTitle eyebrow="automação x padrão" title={title} />
         {items.length === 0 && <SchemaChip label="schema pendente" />}
       </div>
       <div className="relative mt-6 h-[360px] border border-[#f5f4e7]/10 bg-[#050505]">
@@ -2879,9 +3137,9 @@ function DarkRiskHeatmap({
   const categories = ["governança", "dados", "automação", "processo"]
   const hasData = risks.length > 0 || gaps.length > 0
   return (
-    <section className="bg-[#0f0f11] p-5">
+    <section className="aiox-hud-frame bg-[#0f0f11] p-5">
       <div className="flex items-start justify-between gap-4">
-        <DarkSectionTitle eyebrow="Risk heatmap" title="Onde a operação quebra" />
+        <DarkSectionTitle eyebrow="mapa de calor" title="Onde a operação quebra" />
         {!hasData && <SchemaChip label="schema pendente" />}
       </div>
       <div className="mt-6 overflow-x-auto border border-[#f5f4e7]/10">
@@ -2917,15 +3175,15 @@ function DarkRiskHeatmap({
 
 function DarkFunnel({ items }: { items: Array<{ label: string; value: number; active: number; schema: string }> }) {
   return (
-    <section className="bg-[#0f0f11] p-5">
-      <DarkSectionTitle eyebrow="Operational funnel" title="Da evidência até release" />
+    <section className="aiox-hud-frame bg-[#0f0f11] p-5">
+      <DarkSectionTitle eyebrow="funil operacional" title="Da evidência até release" />
       <div className="mt-6 grid gap-3 lg:grid-cols-5">
         {items.map((item, index) => {
           const ratio = item.value > 0 ? item.active / item.value : 0
           const width = Math.max(18, Math.min(100, ratio * 100))
           const blocked = ratio < 1
           return (
-            <article key={item.label} className="relative border border-[#f5f4e7]/10 bg-[#050505] p-4">
+            <article key={item.label} className="aiox-surface-card relative bg-[#050505] p-4">
               <div className="text-[10px] uppercase tracking-[0.12em] text-[#f5f4e7]/38" style={{ fontFamily: MONO_FONT }}>
                 {String(index + 1).padStart(2, "0")} · {item.label}
               </div>
@@ -2970,7 +3228,7 @@ function DarkScoreRow({
   const tone = scoreTone(score, max)
   const width = ((score ?? 0) / Math.max(max ?? maxScale, 1)) * 100
   return (
-    <article className="grid gap-4 border border-[#f5f4e7]/10 bg-[#050505] p-4 lg:grid-cols-[minmax(180px,0.75fr)_80px_minmax(0,1fr)_minmax(220px,1fr)]">
+    <article className="aiox-surface-card grid gap-4 bg-[#050505] p-4 lg:grid-cols-[minmax(180px,0.75fr)_80px_minmax(0,1fr)_minmax(220px,1fr)]">
       <div className="min-w-0">
         <h4 className="truncate text-[15px] font-black capitalize text-[#f5f4e7]">{label}</h4>
         <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#f5f4e7]/35" style={{ fontFamily: MONO_FONT }}>{tone === "good" ? "pass" : tone === "warn" ? "review" : "fail"}</p>
@@ -3002,7 +3260,7 @@ function DarkBar({ label, value, max, display, tone }: { label: string; value: n
 
 function DarkAct({ index, title, stat, body, tone }: { index: string; title: string; stat: string; body: string; tone: Tone }) {
   return (
-    <article className="border border-[#f5f4e7]/10 bg-[#0f0f11] p-5">
+    <article className="aiox-surface-card p-5">
       <div className="text-[10px] uppercase tracking-[0.14em] text-[#f5f4e7]/38" style={{ fontFamily: MONO_FONT }}>Ato {index}</div>
       <div className={cn("mt-2 text-[42px] font-black leading-none tracking-[-0.05em]", tone === "danger" ? "text-[#ef4444]" : tone === "warn" ? "text-[#f5b340]" : "text-[#d1ff00]")} style={{ fontFamily: DISPLAY_FONT }}>
         {stat}

@@ -1,5 +1,7 @@
 import "server-only"
 
+import { existsSync, statSync } from "node:fs"
+import path from "node:path"
 import {
   benchAdapterMeta,
   mapBenchToObservatory,
@@ -35,6 +37,12 @@ import { getSinkraMapsObservatoryData } from "./sinkra-maps-observatory.server"
 
 export type ObservatorySource = "research" | "bench" | "sinkra-maps"
 
+export const OBSERVATORY_SOURCE_LABELS: Array<[ObservatorySource, string]> = [
+  ["research", "Research"],
+  ["bench", "Bench"],
+  ["sinkra-maps", "SINKRA Maps"],
+]
+
 export type ObservatoryLoaderParams = {
   source: ObservatorySource
   slug?: string
@@ -46,9 +54,52 @@ export type ObservatoryLoaderResult = {
   meta: ObservatoryAdapterMeta
 }
 
+function findWorkspaceRoot(startPath: string) {
+  let cursor = startPath
+  for (let i = 0; i < 8; i += 1) {
+    if (
+      existsSync(path.join(cursor, "apps")) ||
+      existsSync(path.join(cursor, "docs")) ||
+      existsSync(path.join(cursor, "outputs"))
+    ) {
+      return cursor
+    }
+    const parent = path.dirname(cursor)
+    if (parent === cursor) break
+    cursor = parent
+  }
+  return path.resolve(startPath, "../..")
+}
+
+function isDirectory(targetPath: string) {
+  try {
+    return statSync(targetPath).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+export function getAvailableObservatorySources(): Array<[ObservatorySource, string]> {
+  const root = findWorkspaceRoot(process.cwd())
+  const sourcePaths: Record<ObservatorySource, string> = {
+    research: path.join(root, "docs", "research"),
+    bench: path.join(root, "docs", "bench"),
+    "sinkra-maps": path.join(root, "outputs", "sinkra-squad"),
+  }
+  return OBSERVATORY_SOURCE_LABELS.filter(([source]) => isDirectory(sourcePaths[source]))
+}
+
+export function isObservatorySourceAvailable(source: ObservatorySource) {
+  return getAvailableObservatorySources().some(([available]) => available === source)
+}
+
 export async function getObservatoryData(
   params: ObservatoryLoaderParams,
 ): Promise<ObservatoryLoaderResult> {
+  if (!isObservatorySourceAvailable(params.source)) {
+    throw new Error(`Observatory source unavailable: ${params.source}`)
+  }
+
   switch (params.source) {
     case "research": {
       const native = await getResearchObservatoryData(params.slug, params.file)
