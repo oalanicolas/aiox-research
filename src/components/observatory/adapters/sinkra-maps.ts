@@ -58,6 +58,15 @@ function mapRun(run: SinkraMapRunSummary): ObservatoryRunSummary {
       hasProcess: run.hasProcess,
       hasDeps: run.hasDeps,
       hasDomain: run.hasDomain,
+      hasObservatory: run.hasObservatory,
+      hasAutomation: run.hasAutomation,
+      hasRaci: run.hasRaci,
+      hasGaps: run.hasGaps,
+      hasCompliance: run.hasCompliance,
+      hasComposition: run.hasComposition,
+      hasTokens: run.hasTokens,
+      hasState: run.hasState,
+      hasMetrics: run.hasMetrics,
     },
   }
 }
@@ -86,15 +95,16 @@ export function mapSinkraMapsToObservatory(
 ): ObservatoryData {
   const runs = data.runs.map(mapRun)
   const selectedRun = mapRun(data.selectedRun)
+  const extras = selectedRun.extras ?? {}
   const modes: ReaderMode[] = ["map"]
-  if (data.structured.workflows.length > 0 || data.structured.dependencies.nodes.length > 0) modes.push("flow")
-  if (data.structured.automation.length > 0) modes.push("automation")
-  if (data.structured.gates.length > 0 || data.structured.compliance.dimensions.length > 0) modes.push("governance")
-  if (data.structured.accountability.length > 0) modes.push("accountability")
-  if (data.structured.gaps.length > 0 || data.structured.observatoryMap?.risks.length) modes.push("gaps")
-  if (data.structured.execution.phases.length > 0 || data.structured.execution.metrics.length > 0) modes.push("evidence")
+  if (extras.hasWorkflow || extras.hasDeps || extras.hasComposition || extras.hasTokens) modes.push("flow")
+  if (extras.hasAutomation) modes.push("automation")
+  if (extras.hasGates || extras.hasCompliance || extras.hasScore) modes.push("governance")
+  if (extras.hasRaci) modes.push("accountability")
+  if (extras.hasGaps || extras.hasObservatory) modes.push("gaps")
+  if (extras.hasState || extras.hasMetrics) modes.push("evidence")
   modes.push("document")
-  if (!data.structured.observatoryMap && (data.structured.score.score !== null || data.structured.artifactCoverage.length > 0)) {
+  if (!extras.hasObservatory && (extras.hasScore || data.structured.artifactCoverage.length > 0)) {
     modes.push("score")
   }
 

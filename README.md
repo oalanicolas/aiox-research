@@ -92,7 +92,8 @@ O SINKRA Maps pode ter muitos arquivos em `outputs/`. Para reduzir latência:
 
 - o índice de mapeamentos fica em cache em memória por 5 minutos;
 - o payload estruturado do mapeamento selecionado fica em cache em memória por 5 minutos;
-- YAML/JSON estruturados são lidos em paralelo;
+- o payload estruturado é carregado por aba: `map`, `flow`, `automation`, `governance`, `accountability`, `gaps`, `evidence`, `score` e `document` leem apenas os YAML/JSON necessários para aquela visualização;
+- YAML/JSON estruturados da aba ativa são lidos em paralelo;
 - o conteúdo bruto de documentos é carregado sob demanda apenas para o arquivo selecionado;
 - views pesadas são carregadas com code splitting via `next/dynamic`.
 

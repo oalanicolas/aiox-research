@@ -389,6 +389,7 @@ const VIEW_FILE_SETS: Partial<Record<ReaderMode, string[]>> = {
   map: [
     "observatory_map.yaml",
     "workflow_definition.yaml",
+    "task_definitions.yaml",
     "quality_gates.yaml",
     "score_card.yaml",
     "process_map.yaml",
@@ -1189,8 +1190,18 @@ async function loadDocumentContent(runPath: string, slug: string, doc: SinkraMap
   }
 }
 
-async function buildRunPayload(root: string, slug: string) {
-  const cacheKey = `${root}:${slug}`
+function normalizeStructuredView(view: ReaderMode | undefined): ReaderMode {
+  return view && view in VIEW_FILE_SETS ? view : "map"
+}
+
+function shouldLoadStructuredFile(view: ReaderMode | undefined, file: string) {
+  const filesForView = VIEW_FILE_SETS[normalizeStructuredView(view)] ?? VIEW_FILE_SETS.map
+  return filesForView?.includes(file) ?? false
+}
+
+async function buildRunPayload(root: string, slug: string, view?: ReaderMode) {
+  const viewKey = normalizeStructuredView(view)
+  const cacheKey = `${root}:${slug}:${viewKey}`
   const now = Date.now()
   const cached = runCache.get(cacheKey)
   if (cached && cached.expiresAt > now) return cached
@@ -1216,22 +1227,22 @@ async function buildRunPayload(root: string, slug: string) {
     stateJson,
     metricsJsonl,
   ] = await Promise.all([
-    files.includes("workflow_definition.yaml") ? readYaml(runPath, "workflow_definition.yaml") : Promise.resolve({}),
-    files.includes("task_definitions.yaml") ? readYaml(runPath, "task_definitions.yaml") : Promise.resolve({}),
-    files.includes("quality_gates.yaml") ? readYaml(runPath, "quality_gates.yaml") : Promise.resolve({}),
-    files.includes("score_card.yaml") ? readYaml(runPath, "score_card.yaml") : Promise.resolve({}),
-    files.includes("process_map.yaml") ? readYaml(runPath, "process_map.yaml") : Promise.resolve({}),
-    files.includes("domain_map.yaml") ? readYaml(runPath, "domain_map.yaml") : Promise.resolve({}),
-    files.includes("dependency_graph.yaml") ? readYaml(runPath, "dependency_graph.yaml") : Promise.resolve({}),
-    files.includes("observatory_map.yaml") ? readYaml(runPath, "observatory_map.yaml") : Promise.resolve({}),
-    files.includes("automation_specs.yaml") ? readYaml(runPath, "automation_specs.yaml") : Promise.resolve({}),
-    files.includes("raci_matrix.yaml") ? readYaml(runPath, "raci_matrix.yaml") : Promise.resolve({}),
-    files.includes("capability_gaps.yaml") ? readYaml(runPath, "capability_gaps.yaml") : Promise.resolve({}),
-    files.includes("compliance_score.yaml") ? readYaml(runPath, "compliance_score.yaml") : Promise.resolve({}),
-    files.includes("composition_map.yaml") ? readYaml(runPath, "composition_map.yaml") : Promise.resolve({}),
-    files.includes("token_assignments.yaml") ? readYaml(runPath, "token_assignments.yaml") : Promise.resolve({}),
-    files.includes("sinkra-state.json") ? readJson(runPath, "sinkra-state.json") : Promise.resolve({}),
-    files.includes("metrics.jsonl") ? readJsonl(runPath, "metrics.jsonl") : Promise.resolve([]),
+    files.includes("workflow_definition.yaml") && shouldLoadStructuredFile(view, "workflow_definition.yaml") ? readYaml(runPath, "workflow_definition.yaml") : Promise.resolve({}),
+    files.includes("task_definitions.yaml") && shouldLoadStructuredFile(view, "task_definitions.yaml") ? readYaml(runPath, "task_definitions.yaml") : Promise.resolve({}),
+    files.includes("quality_gates.yaml") && shouldLoadStructuredFile(view, "quality_gates.yaml") ? readYaml(runPath, "quality_gates.yaml") : Promise.resolve({}),
+    files.includes("score_card.yaml") && shouldLoadStructuredFile(view, "score_card.yaml") ? readYaml(runPath, "score_card.yaml") : Promise.resolve({}),
+    files.includes("process_map.yaml") && shouldLoadStructuredFile(view, "process_map.yaml") ? readYaml(runPath, "process_map.yaml") : Promise.resolve({}),
+    files.includes("domain_map.yaml") && shouldLoadStructuredFile(view, "domain_map.yaml") ? readYaml(runPath, "domain_map.yaml") : Promise.resolve({}),
+    files.includes("dependency_graph.yaml") && shouldLoadStructuredFile(view, "dependency_graph.yaml") ? readYaml(runPath, "dependency_graph.yaml") : Promise.resolve({}),
+    files.includes("observatory_map.yaml") && shouldLoadStructuredFile(view, "observatory_map.yaml") ? readYaml(runPath, "observatory_map.yaml") : Promise.resolve({}),
+    files.includes("automation_specs.yaml") && shouldLoadStructuredFile(view, "automation_specs.yaml") ? readYaml(runPath, "automation_specs.yaml") : Promise.resolve({}),
+    files.includes("raci_matrix.yaml") && shouldLoadStructuredFile(view, "raci_matrix.yaml") ? readYaml(runPath, "raci_matrix.yaml") : Promise.resolve({}),
+    files.includes("capability_gaps.yaml") && shouldLoadStructuredFile(view, "capability_gaps.yaml") ? readYaml(runPath, "capability_gaps.yaml") : Promise.resolve({}),
+    files.includes("compliance_score.yaml") && shouldLoadStructuredFile(view, "compliance_score.yaml") ? readYaml(runPath, "compliance_score.yaml") : Promise.resolve({}),
+    files.includes("composition_map.yaml") && shouldLoadStructuredFile(view, "composition_map.yaml") ? readYaml(runPath, "composition_map.yaml") : Promise.resolve({}),
+    files.includes("token_assignments.yaml") && shouldLoadStructuredFile(view, "token_assignments.yaml") ? readYaml(runPath, "token_assignments.yaml") : Promise.resolve({}),
+    files.includes("sinkra-state.json") && shouldLoadStructuredFile(view, "sinkra-state.json") ? readJson(runPath, "sinkra-state.json") : Promise.resolve({}),
+    files.includes("metrics.jsonl") && shouldLoadStructuredFile(view, "metrics.jsonl") ? readJsonl(runPath, "metrics.jsonl") : Promise.resolve([]),
   ])
 
   const payload = {
@@ -1273,6 +1284,15 @@ async function buildSummary(root: string, slug: string): Promise<Omit<SinkraMapR
   const hasProcess = files.includes("process_map.yaml")
   const hasDeps = files.includes("dependency_graph.yaml")
   const hasDomain = files.includes("domain_map.yaml")
+  const hasObservatory = files.includes("observatory_map.yaml")
+  const hasAutomation = files.includes("automation_specs.yaml")
+  const hasRaci = files.includes("raci_matrix.yaml")
+  const hasGaps = files.includes("capability_gaps.yaml")
+  const hasCompliance = files.includes("compliance_score.yaml")
+  const hasComposition = files.includes("composition_map.yaml")
+  const hasTokens = files.includes("token_assignments.yaml")
+  const hasState = files.includes("sinkra-state.json")
+  const hasMetrics = files.includes("metrics.jsonl")
   const scoreYaml = hasScore ? await readYaml(runPath, "score_card.yaml") : {}
   const overall = asRecord(scoreYaml.overall)
   const score = asString(overall.score ?? scoreYaml.compliance_score, "--")
@@ -1293,6 +1313,15 @@ async function buildSummary(root: string, slug: string): Promise<Omit<SinkraMapR
     hasProcess,
     hasDeps,
     hasDomain,
+    hasObservatory,
+    hasAutomation,
+    hasRaci,
+    hasGaps,
+    hasCompliance,
+    hasComposition,
+    hasTokens,
+    hasState,
+    hasMetrics,
   }
 }
 
@@ -1341,7 +1370,7 @@ async function getSinkraMapIndex(root: string): Promise<{
   return { slugs, summaries }
 }
 
-export async function getSinkraMapsObservatoryData(slug?: string, file?: string): Promise<SinkraMapsObservatoryData> {
+export async function getSinkraMapsObservatoryData(slug?: string, file?: string, view?: ReaderMode): Promise<SinkraMapsObservatoryData> {
   const repoRoot = findRepoRoot(process.cwd())
   const root = path.join(repoRoot, "outputs", "sinkra-squad")
   const { slugs, summaries } = await getSinkraMapIndex(root)
@@ -1353,7 +1382,7 @@ export async function getSinkraMapsObservatoryData(slug?: string, file?: string)
     .sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug))
   const selectedRun = runs.find((run) => run.slug === selectedSlug) ?? runs[0]
   const runPath = path.join(root, selectedRun.slug)
-  const runPayload = await buildRunPayload(root, selectedRun.slug)
+  const runPayload = await buildRunPayload(root, selectedRun.slug, view)
   const selectedDocumentMeta = runPayload.documentsMeta.find((doc) => doc.file === file) ?? runPayload.documentsMeta[0]
   const selectedDocument = selectedDocumentMeta
     ? await loadDocumentContent(runPath, selectedRun.slug, selectedDocumentMeta)

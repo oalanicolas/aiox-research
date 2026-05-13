@@ -82,7 +82,13 @@ export function Observatory({
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [copiedNew, setCopiedNew] = useState(false)
   const [copiedDeepen, setCopiedDeepen] = useState(false)
-  const [viewport, setViewport] = useState<"sm" | "md" | "lg">("lg")
+  const [viewport, setViewport] = useState<"sm" | "md" | "lg">(() => {
+    if (typeof window === "undefined") return "lg"
+    const w = window.innerWidth
+    if (w < 768) return "sm"
+    if (w < 1280) return "md"
+    return "lg"
+  })
 
   const readerBodyRef = useRef<HTMLDivElement | null>(null)
   const indexListRef = useRef<HTMLDivElement | null>(null)

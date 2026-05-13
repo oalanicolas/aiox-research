@@ -8,6 +8,7 @@ import {
   isObservatorySourceAvailable,
   type ObservatorySource,
 } from "@/lib/observatory.server"
+import type { ReaderMode } from "@/components/observatory/foundations/types"
 
 const VALID_SOURCES: ObservatorySource[] = ["research", "bench", "sinkra-maps"]
 
@@ -30,6 +31,7 @@ type ObservatoryPageProps = {
   searchParams?: Promise<{
     slug?: string
     file?: string
+    view?: string
     sort?: string
     status?: string
     group?: string
@@ -59,6 +61,7 @@ export default async function ObservatoryPage({ params, searchParams }: Observat
     source: source as ObservatorySource,
     slug: sp?.slug,
     file: sp?.file,
+    view: sp?.view as ReaderMode | undefined,
   })
 
   return (

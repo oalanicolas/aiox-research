@@ -119,6 +119,8 @@ a {
 
 .aiox-hud-frame {
   position: relative;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--aiox-border);
 }
 
@@ -148,6 +150,7 @@ a {
 
 .aiox-surface-card {
   position: relative;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--aiox-border);
   background: var(--aiox-surface);
@@ -174,4 +177,55 @@ a {
 
 .aiox-surface-card:hover::after {
   transform: scaleX(1);
+}
+
+.aiox-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--aiox-border);
+  background: var(--aiox-surface);
+}
+
+.aiox-panel-header {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--aiox-border);
+  padding: 1rem;
+}
+
+.aiox-panel-kicker {
+  font-family: var(--font-bb-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--aiox-lime);
+}
+
+.aiox-panel-title {
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+  font-family: var(--font-bb-display);
+  font-size: clamp(1.35rem, 2.3vw, 2.25rem);
+  font-weight: 900;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  color: var(--aiox-cream-alt);
+}
+
+.aiox-safe-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.aiox-responsive-canvas {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.aiox-responsive-canvas svg {
+  max-width: 100%;
 }
