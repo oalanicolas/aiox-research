@@ -1,9 +1,9 @@
 import "server-only"
 
-import { existsSync } from "node:fs"
 import { readdir, readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import type { ReaderMode } from "@/components/observatory/foundations/types"
+import { resolveDashPath } from "./workspace-root.server"
 
 export type ResearchDocument = {
   id: string
@@ -167,24 +167,6 @@ let summaryCache:
 
 const sourcesCache = new Map<string, { expiresAt: number; entries: SourceEntry[] }>()
 const playersCache = new Map<string, { expiresAt: number; entries: PlayerEntry[] }>()
-
-function findRepoRoot(startPath: string) {
-  let cursor = startPath
-
-  for (let i = 0; i < 8; i += 1) {
-    if (existsSync(path.join(cursor, "docs", "research"))) {
-      return cursor
-    }
-
-    const parent = path.dirname(cursor)
-    if (parent === cursor) {
-      break
-    }
-    cursor = parent
-  }
-
-  return path.resolve(startPath, "../..")
-}
 
 function prettifySlug(slug: string) {
   return slug
@@ -738,8 +720,7 @@ async function getCachedRunSummaries(researchRoot: string, index: Map<string, In
 }
 
 export async function getResearchObservatoryData(selectedSlug?: string, selectedFile?: string, view?: ReaderMode): Promise<ResearchObservatoryData> {
-  const repoRoot = findRepoRoot(process.cwd())
-  const researchRoot = path.join(repoRoot, "docs", "research")
+  const researchRoot = resolveDashPath("docs", "research")
   const index = await readIndex(researchRoot)
   const summaries = await getCachedRunSummaries(researchRoot, index)
   const preferredSlug = selectedSlug && summaries.some((run) => run.slug === selectedSlug)

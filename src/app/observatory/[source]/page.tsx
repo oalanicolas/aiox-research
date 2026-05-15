@@ -10,18 +10,20 @@ import {
 } from "@/lib/observatory.server"
 import type { ReaderMode } from "@/components/observatory/foundations/types"
 
-const VALID_SOURCES: ObservatorySource[] = ["research", "bench", "sinkra-maps"]
+const VALID_SOURCES: ObservatorySource[] = ["research", "bench", "sinkra-maps", "demo"]
 
 const SOURCE_TITLES: Partial<Record<ObservatorySource, string>> = {
   research: "Research · AIOX Dash",
   bench: "Bench · AIOX Dash",
   "sinkra-maps": "SINKRA Maps · AIOX Dash",
+  demo: "Demo · AIOX Dash",
 }
 
 const SOURCE_DESCRIPTIONS: Partial<Record<ObservatorySource, string>> = {
   research: "Operational reader for docs/research artifacts.",
   bench: "Comparative benchmark dashboards with matrix, personas and TCO.",
   "sinkra-maps": "Structured dashboards for outputs/sinkra-squad maps, workflows, automation and governance.",
+  demo: "Complete sample Observatory with benchmark, slides, roadmap and evidence.",
 }
 
 export const dynamic = "force-dynamic"

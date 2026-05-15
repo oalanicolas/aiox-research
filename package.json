@@ -1,7 +1,8 @@
 {
-  "name": "dash",
+  "name": "aiox-dash",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "description": "Local-first dashboards for research, benchmark and operational mapping artifacts.",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
@@ -12,7 +13,7 @@
     "clsx": "^2.1.1",
     "geist": "^1.7.0",
     "lucide-react": "^0.563.0",
-    "next": "16.1.6",
+    "next": "^16.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
@@ -26,5 +27,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.14"
   }
 }

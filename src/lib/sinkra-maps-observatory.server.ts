@@ -1,10 +1,10 @@
 import "server-only"
 
-import { existsSync } from "node:fs"
 import { readdir, readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import YAML from "yaml"
 import type { ReaderMode } from "@/components/observatory/foundations/types"
+import { resolveDashPath } from "./workspace-root.server"
 
 export type SinkraMapDocument = {
   id: string
@@ -455,17 +455,6 @@ async function mapWithConcurrency<T, R>(
   })
   await Promise.all(workers)
   return results
-}
-
-function findRepoRoot(startPath: string) {
-  let cursor = startPath
-  for (let i = 0; i < 8; i += 1) {
-    if (existsSync(path.join(cursor, "outputs", "sinkra-squad"))) return cursor
-    const parent = path.dirname(cursor)
-    if (parent === cursor) break
-    cursor = parent
-  }
-  return path.resolve(startPath, "../..")
 }
 
 async function listFiles(dir: string) {
@@ -1371,8 +1360,7 @@ async function getSinkraMapIndex(root: string): Promise<{
 }
 
 export async function getSinkraMapsObservatoryData(slug?: string, file?: string, view?: ReaderMode): Promise<SinkraMapsObservatoryData> {
-  const repoRoot = findRepoRoot(process.cwd())
-  const root = path.join(repoRoot, "outputs", "sinkra-squad")
+  const root = resolveDashPath("outputs", "sinkra-squad")
   const { slugs, summaries } = await getSinkraMapIndex(root)
   const selectedSlug = slug && slugs.includes(slug) ? slug : chooseDefaultSlug(summaries)
   if (!selectedSlug) throw new Error("No SINKRA map outputs found")

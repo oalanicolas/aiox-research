@@ -1,6 +1,6 @@
 import "server-only"
 
-import { existsSync, statSync } from "node:fs"
+import { statSync } from "node:fs"
 import path from "node:path"
 import {
   benchAdapterMeta,
@@ -20,8 +20,10 @@ import type {
   ReaderMode,
 } from "@/components/observatory/foundations/types"
 import { getBenchDashboardData } from "./bench-dashboard.server"
+import { demoAdapterMeta, getDemoObservatoryData } from "./demo-observatory.server"
 import { getResearchObservatoryData } from "./research-observatory.server"
 import { getSinkraMapsObservatoryData } from "./sinkra-maps-observatory.server"
+import { getDashWorkspaceRoot } from "./workspace-root.server"
 
 /* ──────────────────────────────────────────────────────────────────────
    Observatory loader — single entry point.
@@ -36,12 +38,13 @@ import { getSinkraMapsObservatoryData } from "./sinkra-maps-observatory.server"
      3. Registering the source below.
    ────────────────────────────────────────────────────────────────────── */
 
-export type ObservatorySource = "research" | "bench" | "sinkra-maps"
+export type ObservatorySource = "research" | "bench" | "sinkra-maps" | "demo"
 
 export const OBSERVATORY_SOURCE_LABELS: Array<[ObservatorySource, string]> = [
   ["research", "Research"],
   ["bench", "Bench"],
   ["sinkra-maps", "SINKRA Maps"],
+  ["demo", "Demo"],
 ]
 
 export type ObservatoryLoaderParams = {
@@ -66,23 +69,6 @@ let sourceAvailabilityCache:
     }
   | null = null
 
-function findWorkspaceRoot(startPath: string) {
-  let cursor = startPath
-  for (let i = 0; i < 8; i += 1) {
-    if (
-      existsSync(path.join(cursor, "apps")) ||
-      existsSync(path.join(cursor, "docs")) ||
-      existsSync(path.join(cursor, "outputs"))
-    ) {
-      return cursor
-    }
-    const parent = path.dirname(cursor)
-    if (parent === cursor) break
-    cursor = parent
-  }
-  return path.resolve(startPath, "../..")
-}
-
 function isDirectory(targetPath: string) {
   try {
     return statSync(targetPath).isDirectory()
@@ -98,13 +84,14 @@ export function getAvailableObservatorySources(): Array<[ObservatorySource, stri
     return sourceAvailabilityCache.sources
   }
 
-  const root = findWorkspaceRoot(cwd)
+  const root = getDashWorkspaceRoot(cwd)
   const sourcePaths: Record<ObservatorySource, string> = {
     research: path.join(root, "docs", "research"),
     bench: path.join(root, "docs", "bench"),
     "sinkra-maps": path.join(root, "outputs", "sinkra-squad"),
+    demo: "",
   }
-  const sources = OBSERVATORY_SOURCE_LABELS.filter(([source]) => isDirectory(sourcePaths[source]))
+  const sources = OBSERVATORY_SOURCE_LABELS.filter(([source]) => source === "demo" || isDirectory(sourcePaths[source]))
   sourceAvailabilityCache = {
     cwd,
     expiresAt: now + SOURCE_CACHE_TTL_MS,
@@ -125,6 +112,9 @@ export async function getObservatoryData(
   }
 
   switch (params.source) {
+    case "demo": {
+      return { data: getDemoObservatoryData(), meta: demoAdapterMeta }
+    }
     case "research": {
       const native = await getResearchObservatoryData(params.slug, params.file, params.view ?? "map")
       return { data: mapResearchToObservatory(native), meta: researchAdapterMeta }
@@ -148,4 +138,5 @@ export const OBSERVATORY_ADAPTERS: Record<ObservatorySource, ObservatoryAdapterM
   research: researchAdapterMeta,
   bench: benchAdapterMeta,
   "sinkra-maps": sinkraMapsAdapterMeta,
+  demo: demoAdapterMeta,
 }

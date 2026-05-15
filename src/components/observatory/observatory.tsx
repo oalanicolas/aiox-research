@@ -368,9 +368,12 @@ export function Observatory({
       ]
     }
     return [
-      { label: "Meta", key: "meta", on: data.documents.some((d) => /metadata\.json/i.test(d.file)) },
+      { label: "Map", key: "map", on: data.availableModes.includes("map") },
+      { label: "Slides", key: "slides", on: data.availableModes.includes("slides") },
+      { label: "Roadmap", key: "roadmap", on: data.availableModes.includes("roadmap") },
+      { label: "Evidência", key: "evidence", on: data.availableModes.includes("evidence") },
       { label: "Score", key: "score", on: data.documents.some((d) => /scorecard/i.test(d.file)) },
-      { label: "Matrix", key: "matrix", on: data.matrix !== null },
+      { label: "Matriz", key: "matrix", on: data.matrix !== null },
       { label: "Personas", key: "personas", on: data.personas.length > 0 },
       { label: "TCO", key: "tco", on: data.tco !== null },
     ]
@@ -386,7 +389,7 @@ export function Observatory({
 
   function onCopyNew() {
     const command =
-      data.source === "bench"
+      data.source === "bench" || data.source === "demo"
         ? `claude && /spy *bench "<player-a>" "<player-b>" "Compare estes players e gere bench-output-dash.json em ${data.sourceRoot}/<slug>/."`
         : data.source === "sinkra-maps"
           ? `claude && *map "<processo-ou-missão>" "Mapeie com SINKRA e gere workflow_definition.yaml, task_definitions.yaml, quality_gates.yaml e score_card.yaml em ${data.sourceRoot}/<slug>/."`
@@ -398,7 +401,7 @@ export function Observatory({
     copyCommand(data.deepenCommand, setCopiedDeepen)
   }
 
-  const showDocCompanions = data.source === "bench" || mode === "document"
+  const showDocCompanions = mode === "document"
   const compactShell = viewport === "sm"
   const showSidePanes = !compactShell
   const showBottomCompanion = showDocCompanions && !compactShell
@@ -502,7 +505,7 @@ export function Observatory({
             availableModes={data.availableModes}
             onChangeMode={changeMode}
             benchEyebrow={
-              data.source === "bench" && data.matrix
+              (data.source === "bench" || data.source === "demo") && data.matrix
                 ? {
                     scale: `${data.matrix.players.length} players × ${data.matrix.rows.length} dim`,
                     subtitle: data.benchmarkShortTitle || data.benchmarkMethod || undefined,
@@ -527,6 +530,7 @@ export function Observatory({
             cliffs={data.cliffs}
             decisionTree={data.decisionTree}
             categorical={data.categorical}
+            gapItems={data.gapItems}
             editorsNote={data.editorsNote}
             playerProfiles={data.playerProfiles}
             topSources={data.topSources}
@@ -675,10 +679,8 @@ function qualityClass(run: ObservatoryRunSummary): QualityKey {
 }
 
 function defaultReaderMode(data: ObservatoryData): ReaderMode {
-  if (data.source === "bench") {
-    /* Bench prioritizes visual impact: Matrix first, then richer modes,
-       finally fall back to document. */
-    const priority: ReaderMode[] = ["matrix", "score", "personas", "duel", "tco", "coverage", "decision", "weights"]
+  if (data.source === "bench" || data.source === "demo") {
+    const priority: ReaderMode[] = ["map", "slides", "roadmap", "evidence", "matrix", "duel", "personas", "tco", "coverage", "decision", "weights", "score"]
     for (const m of priority) {
       if (data.availableModes.includes(m)) return m
     }

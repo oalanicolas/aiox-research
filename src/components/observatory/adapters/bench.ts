@@ -111,16 +111,20 @@ export function mapBenchToObservatory(
   const runs = data.runs.map(mapRun)
   const selectedRun = mapRun(data.selectedRun)
   /* Derive which Reader modes are available based on what the dash carries */
-  const availableModes: ReaderMode[] = []
+  const availableModes: ReaderMode[] = ["map", "slides", "roadmap"]
   const dashMatrix = data.scoreboard
   const hasLegacyMatrix = !dashMatrix && data.matrixRows.length > 0
   const hasScore = data.scoreDimensions.length > 0 || data.scoreMetrics.length > 0
   if (dashMatrix && dashMatrix.rows.length > 0) {
+    availableModes.push("evidence")
     availableModes.push("matrix")
     if (dashMatrix.players.length >= 2) availableModes.push("duel")
   }
   if (hasScore) availableModes.push("score")
-  if (hasLegacyMatrix) availableModes.push("matrix")
+  if (hasLegacyMatrix) {
+    availableModes.push("evidence")
+    availableModes.push("matrix")
+  }
   if (data.personas.length > 0) availableModes.push("personas")
   if (data.tco && data.tco.scenarios.length > 0) availableModes.push("tco")
   const hasCodebaseCoverage = Boolean(

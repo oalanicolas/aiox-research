@@ -2,12 +2,13 @@
  * Source-specific enums (CategorySlug for research, BenchType for bench)
  * live in the corresponding adapter. */
 
-export type ObservatorySource = "research" | "bench" | "sinkra-maps"
+export type ObservatorySource = "research" | "bench" | "sinkra-maps" | "demo"
 
 export const OBSERVATORY_SOURCES: Array<[ObservatorySource, string]> = [
   ["research", "Research"],
   ["bench", "Bench"],
   ["sinkra-maps", "SINKRA Maps"],
+  ["demo", "Demo"],
 ]
 
 /* Filter / sort / group — universal */
@@ -33,6 +34,8 @@ export type ReaderMode =
   | "document"
   | "overview"
   | "map"
+  | "slides"
+  | "roadmap"
   | "recommendations"
   | "curiosity"
   | "waves"

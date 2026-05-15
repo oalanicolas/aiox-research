@@ -1,8 +1,8 @@
 import "server-only"
 
-import { existsSync } from "node:fs"
 import { readdir, readFile, stat } from "node:fs/promises"
 import path from "node:path"
+import { resolveDashPath } from "./workspace-root.server"
 
 export type BenchDocument = {
   id: string
@@ -265,22 +265,6 @@ export type BenchDashboardData = {
 
 const CONTENT_LIMIT = 40000
 const DASH_OUTPUT_FILE = "bench-output-dash.json"
-
-function findRepoRoot(startPath: string) {
-  let cursor = startPath
-
-  for (let i = 0; i < 8; i += 1) {
-    if (existsSync(path.join(cursor, "docs", "bench"))) {
-      return cursor
-    }
-
-    const parent = path.dirname(cursor)
-    if (parent === cursor) break
-    cursor = parent
-  }
-
-  return path.resolve(startPath, "../..")
-}
 
 function prettifySlug(slug: string) {
   return slug
@@ -1345,8 +1329,7 @@ async function buildDocuments(benchPath: string, files: string[]): Promise<Bench
 }
 
 export async function getBenchDashboardData(slugParam?: string, fileParam?: string): Promise<BenchDashboardData> {
-  const repoRoot = findRepoRoot(process.cwd())
-  const benchRoot = path.join(repoRoot, "docs", "bench")
+  const benchRoot = resolveDashPath("docs", "bench")
   const entries = await readdir(benchRoot, { withFileTypes: true })
   const slugs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
   const summaries = await Promise.all(slugs.map((slug) => buildSummary(path.join(benchRoot, slug), slug)))

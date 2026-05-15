@@ -13,19 +13,21 @@ const MODE_LABELS: Record<ReaderMode, string> = {
   document: "Doc",
   overview: "Overview",
   map: "Map",
+  slides: "Slides",
+  roadmap: "Roadmap",
   recommendations: "Ações",
   curiosity: "Perguntas",
   waves: "Waves",
   sources: "Fontes",
   players: "Players",
   score: "Score",
-  matrix: "Matrix",
-  duel: "Duel",
+  matrix: "Matriz",
+  duel: "Duelo",
   personas: "Personas",
   tco: "TCO",
-  coverage: "Coverage",
-  decision: "Decision",
-  weights: "Weights",
+  coverage: "Cobertura",
+  decision: "Decisão",
+  weights: "Pesos",
   workflow: "Workflow",
   tasks: "Tasks",
   gates: "Gates",
@@ -102,7 +104,7 @@ export function ReaderHead({
   const modeLabel = MODE_LABELS[mode]
   const isSinkra = source === "sinkra-maps"
   const title = showFileMeta ? file : isSinkra ? runTitle : modeLabel
-  const context = source === "bench" && benchEyebrow
+  const context = (source === "bench" || source === "demo") && benchEyebrow
     ? benchEyebrow.scale
     : isSinkra
       ? SINKRA_MODE_HELP[mode] ?? "mapa operacional"
