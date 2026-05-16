@@ -5,9 +5,10 @@ artifact:
   id: "2026-05-16-aiox-research-open-research-handoff"
   type: session
   template: handoff-template v3.1
-  status: draft
+  status: updated
   ttl: P30D
   created: "2026-05-16"
+  updated: "2026-05-16"
   scope: intra_processo
   consumed: null
   parent_handoff: "apps/research/HANDOFF-research-compatibility.md"
@@ -21,6 +22,9 @@ artifact:
 **Priority:** P1  
 **Scope:** intra_processo  
 **Next Agent:** qualquer AI sem contexto prévio
+**Latest App Commit:** `328edd4 fix(research): preserve runtime state across refresh`
+**Latest Hub Pin:** `edf6c28da chore(research): track aiox research submodule`
+**Local Dev URL:** `http://localhost:3001/research` via tmux session `aiox-research`
 
 ---
 
@@ -61,6 +65,18 @@ facts:
     since: "2026-05-16"
     superseded_by: "layout parallel-runtimes-v1 dentro de uma pasta única"
   - fact: "O prompt agora referencia o pipeline completo SP-TECH-RESEARCH e assets de squads/research."
+    status: ACTIVE
+    since: "2026-05-16"
+  - fact: "Consolidação não fica mais presa na sidebar; ela aparece abaixo da execução somente depois que todos os runtimes terminam ou quando já existe uma consolidação."
+    status: ACTIVE
+    since: "2026-05-16"
+  - fact: "stderr/quota/rate-limit agora aparece na UI do runtime em vez de ficar invisível no log."
+    status: ACTIVE
+    since: "2026-05-16"
+  - fact: "Refresh da página não deve mais apagar acompanhamento do Codex; o estado é reidratado pelo JSON de run e pode recuperar log sidecar quando o JSON estiver parcialmente corrompido."
+    status: ACTIVE
+    since: "2026-05-16"
+  - fact: "Existe script de reparo legado: npm run repair:legacy --workspace=apps/research."
     status: ACTIVE
     since: "2026-05-16"
 ```
@@ -174,6 +190,11 @@ docs/research/
 - O contrato foi ajustado para uma pasta por pesquisa com subpastas `runtimes/<runtime>/`.
 - O prompt agora força a profundidade do `SP-TECH-RESEARCH`, com refs para skill, workflows, prompts, templates e guardrails.
 - Foram identificadas duas inspirações externas úteis: `karpathy/autoresearch` para programa + orçamento + scoreboard, e `karpathy/llm-council` para conselho multi-modelo com revisão cega e chairman.
+- A tela de pesquisa em andamento foi ajustada para não manter o form principal disponível quando há runs ativos na URL.
+- O painel de consolidação saiu da sidebar e agora só aparece quando todos os runtimes terminam ou quando há run de consolidação.
+- Erros de runtime, incluindo `stderr`, quota exhaustion, rate limit e tentativas falhas, agora aparecem no card/detalhe do runtime.
+- O stream SSE foi aumentado para execuções longas e o estado de run agora usa escrita enfileirada/atômica para reduzir corrupção por concorrência.
+- Rodado reparo local de legacy runs: dois grupos antigos foram consolidados em pasta única com `runtimes/<cli>/`, e três estados em `.tmp/aiox-research-runs/` foram reparados.
 
 ### Decisions Made
 
@@ -299,6 +320,35 @@ Chairman synthesis must output:
 
 ## WHAT IS MISSING
 
+### Latest Implementation Snapshot
+
+```yaml
+app_repo:
+  path: "apps/research"
+  remote: "https://github.com/oalanicolas/aiox-research.git"
+  branch: "main"
+  latest_commit: "328edd4 fix(research): preserve runtime state across refresh"
+hub_repo:
+  path: "/Users/oalanicolas/Code/sinkra-hub"
+  branch: "oalanicolas"
+  relevant_submodule_pin: "edf6c28da chore(research): track aiox research submodule"
+server:
+  tmux_session: "aiox-research"
+  url: "http://localhost:3001/research"
+validated:
+  - "npm run typecheck --workspace=apps/research"
+  - "npm run build --workspace=apps/research"
+  - "npm run repair:legacy --workspace=apps/research"
+  - "curl -I http://localhost:3001/research"
+  - "curl -I http://localhost:3001/observatory/research?slug=<migrated-slug>"
+local_migrated_research_dirs:
+  - "docs/research/2026-05-16-quero-que-faca-uma-pesquisa-sobre-concorrentes-do-open-design-e-faca-uma/"
+  - "docs/research/2026-05-16-sistema-de-busca-no-estilo-andrew-karpathy-de-conselho-de-ias-e-como-pod/"
+commit_caveat:
+  - "Os artefatos migrados em docs/research/ foram deixados como outputs locais/generated e não foram versionados no Hub."
+  - "O submodule apps/research tem .DS_Store não rastreados; não commitar esses arquivos."
+```
+
 ### Current State vs Desired State
 
 ```txt
@@ -336,11 +386,11 @@ success_criteria:
 
 ```yaml
 not_done:
-  - "Migrar runs antigos com pastas separadas por CLI para o novo layout."
+  - "Decidir se os artefatos migrados localmente em docs/research/ devem ser versionados ou tratados apenas como generated outputs."
   - "Trocar log-first por RunOrchestrator com schema canônico de eventos."
   - "Parsear stream-json/NDJSON real de Claude, Codex e Gemini."
   - "Executar extractors do Research Squad após cada run/consolidação."
-  - "Persistir estado de run fora de .tmp para sobreviver a restart do servidor."
+  - "Persistir índice durável de runs fora de .tmp para sobreviver a cleanup/redeploy; refresh/restart local já está parcialmente coberto por JSON + sidecar log."
   - "Criar rota dedicada /research/<slug> ou /research/runs/<runId>."
   - "Implementar Council Mode com Stage 1/2/3, blind peer review e chairman."
   - "Criar research-program.md, research-trials.jsonl, dead-ends.yaml e council/*."
@@ -483,6 +533,13 @@ verification:
 git -C apps/research status --short
 ```
 
+### Restart Local Server
+
+```bash
+tmux kill-session -t aiox-research
+tmux new-session -d -s aiox-research "zsh -lc 'cd /Users/oalanicolas/Code/sinkra-hub && npm run dev --workspace=apps/research -- --port 3001'"
+```
+
 ### Valid Questions
 
 - “Você quer migrar as pastas antigas separadas por runtime agora ou só garantir o layout em novas pesquisas?”
@@ -549,7 +606,17 @@ commands:
     result: pass
   - command: "npm run typecheck --workspace=apps/research"
     result: pass
+  - command: "npm run repair:legacy --workspace=apps/research"
+    result: pass
+    output_summary: "groups=2, runtimeDirsCopied=6, consolidatedDirsCopied=1, rootFilesCreated=38, runStatesRepaired=3"
+  - command: "curl -I http://localhost:3001/research"
+    result: pass
+    output_summary: "HTTP 200"
+  - command: "curl -I http://localhost:3001/observatory/research?slug=<migrated-slug>"
+    result: pass
+    output_summary: "HTTP 200"
 notes:
   - "typecheck antes do build pode falhar se .next/types ainda não existir; o README já documenta rodar build antes."
   - "Não foi feita auditoria visual com browser nesta última etapa."
+  - "A UI agora mostra stderr/quota/rate-limit, mas ainda falta uma visual QA formal com screenshot diff."
 ```
