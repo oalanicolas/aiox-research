@@ -231,12 +231,43 @@ export function Observatory({
       map.set(key, bucket)
     }
     if (group === "category") {
-      return categoryOrder
-        .filter((c) => map.has(c))
-        .map((c) => [c, map.get(c) ?? []] as [string, ObservatoryRunSummary[]])
+      /* Category buckets honor the active sort. CATEGORY_ORDER (hardcoded by
+         relevance) is used only as a tiebreaker / fallback, so that picking
+         `sort=recent` actually surfaces the category whose newest run is the
+         most recent — not the category that happens to come first by name. */
+      const presentKeys = Array.from(map.keys())
+      const maxDateInBucket = (key: string) =>
+        map.get(key)?.reduce((acc, run) => (run.date > acc ? run.date : acc), "") ?? ""
+      const minDateInBucket = (key: string) =>
+        map.get(key)?.reduce((acc, run) => (acc === "" || run.date < acc ? run.date : acc), "") ?? ""
+      const maxCoverageInBucket = (key: string) =>
+        map.get(key)?.reduce((acc, run) => Math.max(acc, coverageNumeric(run.coverage) ?? -1), -1) ?? -1
+      const fallbackIndex = (key: string) => {
+        const idx = categoryOrder.indexOf(key)
+        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx
+      }
+      const ordered = [...presentKeys].sort((a, b) => {
+        if (sort === "recent") {
+          const cmp = maxDateInBucket(b).localeCompare(maxDateInBucket(a))
+          if (cmp !== 0) return cmp
+        } else if (sort === "oldest") {
+          const cmp = minDateInBucket(a).localeCompare(minDateInBucket(b))
+          if (cmp !== 0) return cmp
+        } else if (sort === "coverage") {
+          const cmp = maxCoverageInBucket(b) - maxCoverageInBucket(a)
+          if (cmp !== 0) return cmp
+        } else if (sort === "alpha") {
+          const labelA = categoryBucketLabels.get(a) ?? a
+          const labelB = categoryBucketLabels.get(b) ?? b
+          const cmp = labelA.localeCompare(labelB)
+          if (cmp !== 0) return cmp
+        }
+        return fallbackIndex(a) - fallbackIndex(b)
+      })
+      return ordered.map((c) => [c, map.get(c) ?? []] as [string, ObservatoryRunSummary[]])
     }
     return Array.from(map.entries())
-  }, [visibleRuns, group, categoryOrder])
+  }, [visibleRuns, group, sort, categoryOrder, categoryBucketLabels])
 
   /* ── file-level pager ── */
   const artifactDocs = useMemo(
@@ -388,6 +419,11 @@ export function Observatory({
   }
 
   function onCopyNew() {
+    if (data.source === "research") {
+      router.push("/research")
+      return
+    }
+
     const command =
       data.source === "bench" || data.source === "demo"
         ? `claude && /spy *bench "<player-a>" "<player-b>" "Compare estes players e gere bench-output-dash.json em ${data.sourceRoot}/<slug>/."`

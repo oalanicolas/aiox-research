@@ -34,6 +34,32 @@ import {
   writeIfAllowed,
 } from "./shared.mjs"
 
+/**
+ * A research dir is "authorial" when it has explicit, human/CLI-authored body
+ * content. In that case the compat script must NOT fabricate metrics /
+ * pipeline-state / curiosity stubs over the top of it — the legitimate
+ * pipeline (tech-research, etc.) is responsible for those artifacts, and
+ * filling them with synthetic numbers violates extraction-no-fallbacks
+ * (.claude/rules/extraction-no-fallbacks.md).
+ *
+ * Heuristic: report body OR readme is meaningfully populated.
+ */
+const AUTHORIAL_BODY_MIN_BYTES = 800
+
+async function dirHasAuthorialContent(dir, files) {
+  const candidates = ["02-research-report.md", "README.md"]
+  for (const candidate of candidates) {
+    if (!files.includes(candidate)) continue
+    try {
+      const st = await stat(path.join(dir, candidate))
+      if (st.size >= AUTHORIAL_BODY_MIN_BYTES) return true
+    } catch {
+      // ignore — treat as absent for safety
+    }
+  }
+  return false
+}
+
 const CORE_FILES = [
   "README.md",
   "00-query-original.md",
@@ -559,15 +585,27 @@ export async function processResearchRoot(researchRoot) {
       if (status !== "skipped") written.push(`${file}:${status}`)
     }
 
-    await slot("metrics.yaml", metricsYaml(slug, files, sourcesFromMarkdown, existingSources, waves))
-    await slot("pipeline-state.yaml", pipelineYaml(slug, title, files, waves))
-    await slot("execution-log.jsonl", executionLog(slug, files, waves))
+    /* When the research dir is authorial (real CLI/human body), only emit
+       non-destructive auxiliary artifacts (sources.yaml, research-graph.json,
+       matrices.yaml when tables exist). Skip the synthetic numeric stubs
+       (metrics.yaml, pipeline-state.yaml, execution-log.jsonl,
+       curiosity_queue.yaml, quick-wins.md) — those would either fabricate
+       coverage/integrity scores or downgrade real findings to inferred
+       placeholders, both of which violate extraction-no-fallbacks. */
+    const authorial = await dirHasAuthorialContent(dir, files)
+    if (!authorial) {
+      await slot("metrics.yaml", metricsYaml(slug, files, sourcesFromMarkdown, existingSources, waves))
+      await slot("pipeline-state.yaml", pipelineYaml(slug, title, files, waves))
+      await slot("execution-log.jsonl", executionLog(slug, files, waves))
+    }
     files = (await readdir(dir, { withFileTypes: true }))
       .filter((entry) => entry.isFile()).map((entry) => entry.name).sort()
     await slot("research-graph.json", await graphJson(slug, dir, files, sourcesFromMarkdown))
     if (tables.length > 0) await slot("matrices.yaml", matricesYaml(slug, tables))
-    await slot("curiosity_queue.yaml", curiosityYaml(slug, questions))
-    await slot("quick-wins.md", quickWinsMd(slug, title, quickWins))
+    if (!authorial) {
+      await slot("curiosity_queue.yaml", curiosityYaml(slug, questions))
+      await slot("quick-wins.md", quickWinsMd(slug, title, quickWins))
+    }
 
     report.push({ slug, written })
     indexEntries.push({
