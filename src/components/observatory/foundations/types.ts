@@ -568,6 +568,24 @@ export type ObservatoryData = {
   benchmarkShortTitle: string
   typeSpecific: ObservatoryTypeSpecific
 
+  /* Cross-poll from research-mode: curiosity questions + execution log waves.
+     Populated by bench adapter when sidecar files exist. */
+  curiosity: Array<{
+    id: string
+    category: string
+    question: string
+    priority: string
+    whyItMatters: string
+    nextAction: string
+  }>
+  waves: Array<{
+    ts: string
+    phase: string
+    wave: number | null
+    event: string
+    summary: string
+  }>
+
   /* Discover which Reader modes the UI should expose */
   availableModes: ReaderMode[]
 }

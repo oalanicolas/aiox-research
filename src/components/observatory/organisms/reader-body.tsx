@@ -13,6 +13,7 @@ import { markdownComponents } from "../foundations/markdown-components"
 import type {
   ObservatoryCliff,
   ObservatoryCategoricalWinner,
+  ObservatoryData,
   ObservatoryDecisionNode,
   ObservatoryDocument,
   ObservatoryEditorsNote,
@@ -51,6 +52,12 @@ const DuelView = dynamic(() => import("./duel-view").then((mod) => mod.DuelView)
 })
 const DocsView = dynamic(() => import("./docs-view").then((mod) => mod.DocsView), {
   loading: () => <ReportLoader label="Docs" />,
+})
+const BenchCuriosityView = dynamic(() => import("./bench-cross-views").then((mod) => mod.BenchCuriosityView), {
+  loading: () => <ReportLoader label="Perguntas" />,
+})
+const BenchWavesView = dynamic(() => import("./bench-cross-views").then((mod) => mod.BenchWavesView), {
+  loading: () => <ReportLoader label="Waves" />,
 })
 const SinkraMapReport = dynamic(() => import("./sinkra-map-report").then((mod) => mod.SinkraMapReport), {
   loading: () => <ReportLoader label="SINKRA Map" dark />,
@@ -104,6 +111,8 @@ export function ReaderBody({
   researchPlayers,
   sourceSummary,
   typeSpecific,
+  benchCuriosity,
+  benchWaves,
 }: {
   source?: ObservatorySource
   mode?: ReaderMode
@@ -128,6 +137,8 @@ export function ReaderBody({
   researchPlayers?: ObservatoryPlayer[]
   sourceSummary?: string[]
   typeSpecific?: ObservatoryTypeSpecific
+  benchCuriosity?: ObservatoryData["curiosity"]
+  benchWaves?: ObservatoryData["waves"]
 }) {
   const benchReport = (children: ReactNode) =>
     source === "bench" || source === "demo" ? <BenchReportShell>{children}</BenchReportShell> : children
@@ -284,6 +295,15 @@ export function ReaderBody({
   }
   if (mode === "decision") {
     return <BenchDecisionReport decisionTree={decisionTree ?? []} tiebreakers={tiebreakers ?? []} cliffs={cliffs ?? []} categorical={categorical ?? []} editorsNote={editorsNote ?? null} playerProfiles={playerProfiles ?? []} />
+  }
+  /* Cross-poll bench-only: curiosity + waves vêm de sidecar files (curiosity-queue.yaml +
+     execution-log.jsonl). Research-mode tem renderers próprios mais acima que comem
+     documents[]. Aqui usamos os organisms bench-cross-views com dados tipados. */
+  if (mode === "curiosity" && (source === "bench" || source === "demo")) {
+    return benchReport(<BenchCuriosityView curiosity={benchCuriosity ?? []} />)
+  }
+  if (mode === "waves" && (source === "bench" || source === "demo")) {
+    return benchReport(<BenchWavesView waves={benchWaves ?? []} />)
   }
   if (mode === "weights" && matrix) {
     return benchReport(

@@ -252,6 +252,27 @@ export type BenchDuelDetail = {
   ties: string[]
 }
 
+/* Curiosity question — ported from research-observatory.server.ts shape.
+   Read from bench/{slug}/curiosity-queue.yaml when present. Empty array when not. */
+export type BenchCuriosityQuestion = {
+  id: string
+  category: string
+  question: string
+  priority: string
+  whyItMatters: string
+  nextAction: string
+}
+
+/* Waves event — ported from research timeline shape.
+   Read from bench/{slug}/execution-log.jsonl when present. Empty array when not. */
+export type BenchWaveEvent = {
+  ts: string
+  phase: string
+  wave: number | null
+  event: string
+  summary: string
+}
+
 export type BenchDashboardData = {
   stats: {
     totalRuns: number
@@ -287,6 +308,11 @@ export type BenchDashboardData = {
   typeSpecific: BenchTypeSpecific
   editorsNote: BenchEditorsNote | null
   duels: BenchDuelDetail[]
+  /* Cross-pollinated from research-mode (2026-05-18 directive):
+     bench-output-dash.json doesn't carry these fields, so we read sidecar
+     files (curiosity-queue.yaml + execution-log.jsonl) directly. */
+  curiosity: BenchCuriosityQuestion[]
+  waves: BenchWaveEvent[]
 }
 
 const CONTENT_LIMIT = 40000
@@ -1463,6 +1489,60 @@ async function buildDocuments(benchPath: string, files: string[]): Promise<Bench
   }))
 }
 
+/* Cross-poll loaders — read sidecar files que existem no bench mas não estão
+   no bench-output-dash.json (curiosity-queue.yaml + execution-log.jsonl).
+   Compatibilidade total: schema bench-* OU shape research (open_questions
+   vs questions, events vs phases). Falha silenciosa quando arquivo não existe. */
+
+async function readCuriosityQueue(benchPath: string): Promise<BenchCuriosityQuestion[]> {
+  try {
+    const raw = await readFile(path.join(benchPath, "curiosity-queue.yaml"), "utf8")
+    /* Lazy YAML import to avoid hard dep when curiosity is absent. */
+    const yaml = (await import("yaml")).default
+    const parsed = yaml.parse(raw)
+    if (!parsed || typeof parsed !== "object") return []
+    const list = (parsed.open_questions ?? parsed.questions ?? parsed.items) as unknown
+    if (!Array.isArray(list)) return []
+    return list
+      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
+      .map((item, index) => ({
+        id: formatValue(item.id, `Q${index + 1}`),
+        category: formatValue(item.category, ""),
+        question: formatValue(item.question ?? item.title ?? item.q, "Pergunta sem texto"),
+        priority: formatValue(item.priority, "MEDIUM").toUpperCase(),
+        whyItMatters: formatValue(item.why_it_matters ?? item.whyItMatters ?? item.rationale, ""),
+        nextAction: formatValue(item.next_action ?? item.nextAction ?? item.action, ""),
+      }))
+  } catch {
+    return []
+  }
+}
+
+async function readExecutionLog(benchPath: string): Promise<BenchWaveEvent[]> {
+  try {
+    const raw = await readFile(path.join(benchPath, "execution-log.jsonl"), "utf8")
+    const lines = raw.split("\n").filter((line) => line.trim().length > 0)
+    const events: BenchWaveEvent[] = []
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line) as Record<string, unknown>
+        events.push({
+          ts: formatValue(entry.ts, ""),
+          phase: formatValue(entry.phase, "—"),
+          wave: typeof entry.wave === "number" ? entry.wave : null,
+          event: formatValue(entry.event, ""),
+          summary: formatValue(entry.summary, ""),
+        })
+      } catch {
+        /* skip malformed line */
+      }
+    }
+    return events
+  } catch {
+    return []
+  }
+}
+
 export async function getBenchDashboardData(slugParam?: string, fileParam?: string): Promise<BenchDashboardData> {
   const benchRoot = resolveDashPath("docs", "bench")
   const entries = await readdir(benchRoot, { withFileTypes: true })
@@ -1525,6 +1605,9 @@ export async function getBenchDashboardData(slugParam?: string, fileParam?: stri
   const { shortTitle, method, confidenceBreakdown, narrative } = extractDashShortFields(dash)
   const sources = extractDashSources(dash)
   const sourceSummary = extractDashSourceSummary(dash)
+  /* Cross-poll from research-mode: read sidecar files directly. */
+  const curiosity = await readCuriosityQueue(selectedPath)
+  const waves = await readExecutionLog(selectedPath)
 
   return {
     stats: {
@@ -1560,5 +1643,7 @@ export async function getBenchDashboardData(slugParam?: string, fileParam?: stri
     typeSpecific,
     editorsNote,
     duels,
+    curiosity,
+    waves,
   }
 }

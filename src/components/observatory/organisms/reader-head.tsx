@@ -51,6 +51,8 @@ const BENCH_MODE_LABELS: Partial<Record<ReaderMode, string>> = {
   evidence: "Evidências",
   roadmap: "Execução",
   decision: "Decisão",
+  waves: "Waves",
+  curiosity: "Perguntas",
   slides: "Slides",
   document: "Docs",
 }

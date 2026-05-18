@@ -185,6 +185,8 @@ export function getDemoObservatoryData(): ObservatoryData {
     benchmarkNarrative: "Demo completo para onboarding: map, slides, roadmap, evidências, matriz, duelo, score, personas, TCO e decisão.",
     benchmarkShortTitle: "AI Ops Command Center",
     typeSpecific: {},
+    curiosity: [],
+    waves: [],
     availableModes: ["map", "slides", "roadmap", "evidence", "matrix", "duel", "score", "personas", "tco", "decision", "document"],
   }
 }

@@ -536,6 +536,8 @@ export function Observatory({
             researchPlayers={data.players}
             sourceSummary={data.sourceSummary}
             typeSpecific={data.typeSpecific}
+            benchCuriosity={data.curiosity}
+            benchWaves={data.waves}
           />
         </section>
 
@@ -669,7 +671,7 @@ function defaultReaderMode(data: ObservatoryData): ReaderMode {
   if (data.source === "bench" || data.source === "demo") {
     /* Decision-flow priority. Overview primeiro = 1-pager de clareza pra orientar
        o leitor antes de qualquer manipulação. See DOCTRINE-decision-in-one-click.md. */
-    const priority: ReaderMode[] = ["map", "matrix", "duel", "weights", "personas", "evidence", "roadmap", "decision", "slides", "document", "score", "tco", "coverage"]
+    const priority: ReaderMode[] = ["map", "matrix", "duel", "weights", "personas", "evidence", "roadmap", "decision", "waves", "curiosity", "slides", "document", "score", "tco", "coverage"]
     for (const m of priority) {
       if (data.availableModes.includes(m)) return m
     }

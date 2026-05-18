@@ -130,6 +130,11 @@ export function mapResearchToObservatory(
     benchmarkNarrative: "",
     benchmarkShortTitle: "",
     typeSpecific: {},
+    /* Research source has its own curiosity/waves pipeline via documents — keep
+       empty arrays here; ReaderBody falls back to existing renderers (CuriosityReport,
+       WavesReport) when source === "research". */
+    curiosity: [],
+    waves: [],
 
     availableModes,
   }

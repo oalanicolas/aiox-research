@@ -146,6 +146,9 @@ export function mapBenchToObservatory(
   if (hasEvidence) availableModes.push("evidence")
   if (hasRoadmap) availableModes.push("roadmap")
   if (hasDecision) availableModes.push("decision")
+  /* Cross-poll from research-mode: curiosity + waves quando sidecar files existem. */
+  if (data.waves.length > 0) availableModes.push("waves")
+  if (data.curiosity.length > 0) availableModes.push("curiosity")
   if (hasSlides) availableModes.push("slides")
   if (hasScore && !isProductBench) availableModes.push("score")
   if (data.tco && data.tco.scenarios.length > 0) availableModes.push("tco")
@@ -306,6 +309,8 @@ export function mapBenchToObservatory(
     benchmarkNarrative: data.narrative,
     benchmarkShortTitle: data.shortTitle,
     typeSpecific: data.typeSpecific ?? {},
+    curiosity: data.curiosity,
+    waves: data.waves,
 
     availableModes,
   }

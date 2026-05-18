@@ -182,6 +182,9 @@ export function mapSinkraMapsToObservatory(
         artifactCoverage: data.structured.artifactCoverage,
       },
     },
+    /* SINKRA maps don't currently expose curiosity/waves — empty arrays. */
+    curiosity: [],
+    waves: [],
     availableModes: modes,
   }
 }
