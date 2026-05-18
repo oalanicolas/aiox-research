@@ -55,6 +55,12 @@ const PLAYERS_PARAM = "players"
 const COMPARE_PARAM = "compare"
 const ANCHOR_DEFAULT = "aiox_research"
 
+/* Cap default da matriz: 20 players por motivo de leitura visual.
+   Mesmo benches com >20 (atual: 25) mostram só top-20 por score baseline +
+   anchor garantido. User pode desbloquear via bulk-select "Mostrar todos"
+   (que escreve ?players= explícito = bypass do cap). */
+const DEFAULT_VISIBLE_CAP = 20
+
 function clampWeight(n: number): number {
   if (!Number.isFinite(n)) return 0
   if (n < 0) return 0
@@ -131,18 +137,37 @@ export function useDecisionState(
 
   const visiblePlayers = useMemo(() => {
     const raw = searchParams?.get(PLAYERS_PARAM)
-    if (!raw) return new Set(matrix.players)
-    const requested = raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .filter((key) => matrix.players.includes(key))
-    /* Anchor always visible — if user URL hides it, force back in.
-       Empty set after filter → fall back to all (graceful). */
-    const set = new Set<string>(requested)
-    if (matrix.players.includes(anchorKey)) set.add(anchorKey)
-    return set.size > 0 ? set : new Set(matrix.players)
-  }, [searchParams, matrix.players, anchorKey])
+    if (raw) {
+      const requested = raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((key) => matrix.players.includes(key))
+      const set = new Set<string>(requested)
+      if (matrix.players.includes(anchorKey)) set.add(anchorKey)
+      return set.size > 0 ? set : new Set(matrix.players)
+    }
+    /* No explicit ?players= → apply DEFAULT_VISIBLE_CAP (20).
+       Strategy: take top-N by matrix.totals baseline score, anchor always in.
+       When players.length <= cap, show all (no truncation). */
+    if (matrix.players.length <= DEFAULT_VISIBLE_CAP) {
+      return new Set(matrix.players)
+    }
+    const totalsRanked = [...matrix.totals]
+      .sort((a, b) => b.score - a.score)
+      .map((t) => t.player)
+    const top = totalsRanked.slice(0, DEFAULT_VISIBLE_CAP)
+    const set = new Set<string>(top)
+    if (matrix.players.includes(anchorKey)) {
+      set.add(anchorKey)
+      /* Adding anchor may overflow cap; trim the lowest-ranked non-anchor */
+      if (set.size > DEFAULT_VISIBLE_CAP) {
+        const trimCandidate = [...totalsRanked].reverse().find((p) => p !== anchorKey && set.has(p))
+        if (trimCandidate) set.delete(trimCandidate)
+      }
+    }
+    return set
+  }, [searchParams, matrix.players, matrix.totals, anchorKey])
 
   const hasOverrides = useMemo(() => {
     if (!searchParams) return false
