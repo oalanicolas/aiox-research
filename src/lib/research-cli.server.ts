@@ -64,6 +64,15 @@ const CLI_DEFINITIONS: CliDefinition[] = [
     launchHint: "Executa `codex exec` no workspace com sandbox workspace-write.",
   },
   {
+    id: "research-core",
+    name: "Research Core",
+    bin: "node",
+    versionArgs: ["--version"],
+    launchSupported: true,
+    installHint: "Instale Node.js; o runtime local `research-core` roda via Node type stripping.",
+    launchHint: "Executa `apps/research/packages/research-core` e persiste artefatos Gold em `docs/research/{slug}`.",
+  },
+  {
     id: "gemini",
     name: "Gemini CLI",
     bin: "gemini",
@@ -228,7 +237,7 @@ async function startCliBackedRun(input: CliBackedRunInput): Promise<ResearchRunS
   }
   await persistRunState(statePath, initialState)
 
-  const invocation = buildInvocation(input.cliId, cli.path, discovery.workspaceRoot)
+  const invocation = buildInvocation(input, cli.path, discovery.workspaceRoot, shell)
   const method = methodById(input.methodId)
   const child = spawn(invocation.command, invocation.args, {
     cwd: discovery.workspaceRoot,
@@ -719,8 +728,13 @@ function shouldUseShell(command: string) {
   return process.platform === "win32" && /\.(bat|cmd)$/i.test(command)
 }
 
-function buildInvocation(cliId: ResearchCliId, command: string, workspaceRoot: string): CliInvocation {
-  if (cliId === "claude") {
+function buildInvocation(
+  input: CliBackedRunInput,
+  command: string,
+  workspaceRoot: string,
+  shell: ResearchShell,
+): CliInvocation {
+  if (input.cliId === "claude") {
     return {
       command,
       args: ["-p", "--permission-mode", "bypassPermissions"],
@@ -728,7 +742,7 @@ function buildInvocation(cliId: ResearchCliId, command: string, workspaceRoot: s
       shell: shouldUseShell(command),
     }
   }
-  if (cliId === "codex") {
+  if (input.cliId === "codex") {
     return {
       command,
       args: [
@@ -745,7 +759,23 @@ function buildInvocation(cliId: ResearchCliId, command: string, workspaceRoot: s
       shell: shouldUseShell(command),
     }
   }
-  if (cliId === "gemini") {
+  if (input.cliId === "research-core") {
+    return {
+      command,
+      args: [
+        "--experimental-strip-types",
+        path.join(workspaceRoot, "apps", "research", "packages", "research-core", "src", "cli.ts"),
+        "--gold-output-dir",
+        shell.researchDir,
+        "--gold-slug",
+        input.outputSlug,
+        input.query,
+      ],
+      env: {},
+      shell: shouldUseShell(command),
+    }
+  }
+  if (input.cliId === "gemini") {
     return {
       command,
       args: ["--yolo"],
@@ -753,7 +783,7 @@ function buildInvocation(cliId: ResearchCliId, command: string, workspaceRoot: s
       shell: shouldUseShell(command),
     }
   }
-  throw new Error(`Adapter sem launcher: ${cliId}`)
+  throw new Error(`Adapter sem launcher: ${input.cliId}`)
 }
 
 async function readState(statePath: string): Promise<PersistedRunState> {

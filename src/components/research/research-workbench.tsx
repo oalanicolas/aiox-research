@@ -2596,6 +2596,7 @@ function compactCliLabel(cliId: ResearchCliId) {
   if (cliId === "claude") return "Claude"
   if (cliId === "codex") return "Codex"
   if (cliId === "gemini") return "Gemini"
+  if (cliId === "research-core") return "Research Core"
   return "OpenRouter"
 }
 
@@ -2898,6 +2899,7 @@ function cliLabel(cliId: ResearchCliId) {
   if (cliId === "claude") return "Claude Code"
   if (cliId === "codex") return "Codex CLI"
   if (cliId === "gemini") return "Gemini CLI"
+  if (cliId === "research-core") return "Research Core"
   if (cliId === "byok") return OPENROUTER_CLI_LABEL
   return "CLI"
 }
@@ -2906,6 +2908,7 @@ function cliGlyph(cliId: ResearchCliId) {
   if (cliId === "claude") return "CC"
   if (cliId === "codex") return "CX"
   if (cliId === "gemini") return "GM"
+  if (cliId === "research-core") return "RC"
   if (cliId === "byok") return "OR"
   return "AI"
 }
@@ -3063,6 +3066,14 @@ function cliLogoMeta(cliId: ResearchCliId) {
       mark: "✦",
       color: "#8AB4F8",
       fontFamily: SANS_FONT,
+    }
+  }
+  if (cliId === "research-core") {
+    return {
+      title: "Research Core",
+      mark: "RC",
+      color: "#D1FF00",
+      fontFamily: MONO_FONT,
     }
   }
   return {

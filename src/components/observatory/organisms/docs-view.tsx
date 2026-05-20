@@ -577,26 +577,34 @@ function orderDocumentsByPriority(docs: ObservatoryDocument[]): ObservatoryDocum
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+function withoutDocNode<T extends { node?: unknown }>(props: T): Omit<T, "node"> {
+  const { node: _node, ...rest } = props
+  return rest
+}
+
 function docMdComponents(): Record<string, any> {
   return {
-    h1: (props: any) => <h1 {...props} />,
-    h2: (props: any) => <h2 {...props} />,
-    h3: (props: any) => <h3 {...props} />,
-    p: (props: any) => <p {...props} />,
-    ul: (props: any) => <ul {...props} />,
-    ol: (props: any) => <ol {...props} />,
-    li: (props: any) => <li {...props} />,
-    code: (props: any) => <code {...props} />,
-    pre: (props: any) => <pre {...props} />,
-    blockquote: (props: any) => <blockquote {...props} />,
-    table: (props: any) => <table {...props} />,
-    a: (props: any) => (
+    h1: (props: any) => <h1 {...withoutDocNode(props)} />,
+    h2: (props: any) => <h2 {...withoutDocNode(props)} />,
+    h3: (props: any) => <h3 {...withoutDocNode(props)} />,
+    p: (props: any) => <p {...withoutDocNode(props)} />,
+    ul: (props: any) => <ul {...withoutDocNode(props)} />,
+    ol: (props: any) => <ol {...withoutDocNode(props)} />,
+    li: (props: any) => <li {...withoutDocNode(props)} />,
+    code: (props: any) => <code {...withoutDocNode(props)} />,
+    pre: (props: any) => <pre {...withoutDocNode(props)} />,
+    blockquote: (props: any) => <blockquote {...withoutDocNode(props)} />,
+    table: (props: any) => <table {...withoutDocNode(props)} />,
+    a: (props: any) => {
+      const rest = withoutDocNode(props)
+      return (
       <a
-        target={String(props.href || "").startsWith("http") ? "_blank" : undefined}
+        target={String(rest.href || "").startsWith("http") ? "_blank" : undefined}
         rel="noopener noreferrer"
-        {...props}
+        {...rest}
       />
-    ),
+      )
+    },
   }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

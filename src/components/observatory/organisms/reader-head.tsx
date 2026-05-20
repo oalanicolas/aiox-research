@@ -111,6 +111,7 @@ export function ReaderHead({
 }) {
   const [copied, setCopied] = useState(false)
   const [openingFolder, setOpeningFolder] = useState(false)
+  const [folderStatus, setFolderStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null)
 
   function handleCopy() {
     onCopy()
@@ -121,6 +122,7 @@ export function ReaderHead({
   async function handleOpenFolder() {
     if (openingFolder) return
     setOpeningFolder(true)
+    setFolderStatus(null)
     try {
       const response = await fetch("/api/observatory/open-folder", {
         method: "POST",
@@ -131,8 +133,13 @@ export function ReaderHead({
         const payload = await response.json().catch(() => null)
         throw new Error(payload?.error ?? "Não foi possível abrir a pasta.")
       }
+      setFolderStatus({ tone: "success", message: "Pasta aberta." })
     } catch (error) {
       console.warn(error)
+      setFolderStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Não foi possível abrir a pasta.",
+      })
     } finally {
       setOpeningFolder(false)
     }
@@ -262,6 +269,21 @@ export function ReaderHead({
             </div>
           )}
         </div>
+        {showFileMeta && folderStatus && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={cn(
+              "w-fit max-w-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em]",
+              folderStatus.tone === "success"
+                ? "border-[var(--lime-ink)] text-[var(--lime-ink)]"
+                : "border-red-400/70 text-red-700",
+            )}
+            style={{ fontFamily: MONO_FONT }}
+          >
+            {folderStatus.message}
+          </div>
+        )}
 
         <div className="min-w-0">
           {showSwitcher && (

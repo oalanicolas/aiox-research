@@ -3,14 +3,14 @@ import "server-only"
 import { existsSync } from "node:fs"
 import path from "node:path"
 
-const ROOT_MARKERS = ["docs", "outputs", "apps"] as const
+const ROOT_MARKERS = ["docs", "apps"] as const
 
 function normalizeRoot(candidate: string) {
   return path.resolve(candidate.replace(/^~(?=$|\/|\\)/, process.env.HOME ?? "~"))
 }
 
 function hasWorkspaceMarker(candidate: string) {
-  return ROOT_MARKERS.some((marker) => existsSync(path.join(candidate, marker)))
+  return ROOT_MARKERS.every((marker) => existsSync(path.join(candidate, marker)))
 }
 
 export function getDashWorkspaceRoot(startPath = process.cwd()) {

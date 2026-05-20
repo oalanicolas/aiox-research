@@ -55,12 +55,6 @@ const PLAYERS_PARAM = "players"
 const COMPARE_PARAM = "compare"
 const ANCHOR_DEFAULT = "aiox_research"
 
-/* Cap default da matriz: 20 players por motivo de leitura visual.
-   Mesmo benches com >20 (atual: 25) mostram só top-20 por score baseline +
-   anchor garantido. User pode desbloquear via bulk-select "Mostrar todos"
-   (que escreve ?players= explícito = bypass do cap). */
-const DEFAULT_VISIBLE_CAP = 20
-
 function clampWeight(n: number): number {
   if (!Number.isFinite(n)) return 0
   if (n < 0) return 0
@@ -96,11 +90,12 @@ function personaWeightsByRowId(
 export function useDecisionState(
   matrix: ObservatoryMatrix,
   personas: ObservatoryPersona[],
-  options?: { anchorKey?: string },
+  options?: { anchorKey?: string; maxVisiblePlayers?: number },
 ): DecisionState {
   const router = useRouter()
   const searchParams = useSearchParams()
   const anchorKey = options?.anchorKey ?? ANCHOR_DEFAULT
+  const maxVisiblePlayers = options?.maxVisiblePlayers
 
   const baselineWeights = useMemo(() => baselineFromMatrix(matrix), [matrix])
 
@@ -135,6 +130,28 @@ export function useDecisionState(
     return out
   }, [matrix, searchParams, personaWeights, baselineWeights])
 
+  const baselineRankedPlayers = useMemo(() => {
+    const ranked = [...matrix.totals]
+      .sort((a, b) => b.score - a.score)
+      .map((t) => t.player)
+      .filter((key) => matrix.players.includes(key))
+    return [...ranked, ...matrix.players.filter((key) => !ranked.includes(key))]
+  }, [matrix.players, matrix.totals])
+
+  const capVisibleSet = useCallback(
+    (input: Set<string>) => {
+      if (!maxVisiblePlayers || input.size <= maxVisiblePlayers) return input
+      const capped = new Set<string>()
+      if (matrix.players.includes(anchorKey) && input.has(anchorKey)) capped.add(anchorKey)
+      for (const player of baselineRankedPlayers) {
+        if (capped.size >= maxVisiblePlayers) break
+        if (input.has(player)) capped.add(player)
+      }
+      return capped.size > 0 ? capped : new Set(baselineRankedPlayers.slice(0, maxVisiblePlayers))
+    },
+    [anchorKey, baselineRankedPlayers, matrix.players, maxVisiblePlayers],
+  )
+
   const visiblePlayers = useMemo(() => {
     const raw = searchParams?.get(PLAYERS_PARAM)
     if (raw) {
@@ -145,29 +162,10 @@ export function useDecisionState(
         .filter((key) => matrix.players.includes(key))
       const set = new Set<string>(requested)
       if (matrix.players.includes(anchorKey)) set.add(anchorKey)
-      return set.size > 0 ? set : new Set(matrix.players)
+      return set.size > 0 ? capVisibleSet(set) : capVisibleSet(new Set(matrix.players))
     }
-    /* No explicit ?players= → apply DEFAULT_VISIBLE_CAP (20).
-       Strategy: take top-N by matrix.totals baseline score, anchor always in.
-       When players.length <= cap, show all (no truncation). */
-    if (matrix.players.length <= DEFAULT_VISIBLE_CAP) {
-      return new Set(matrix.players)
-    }
-    const totalsRanked = [...matrix.totals]
-      .sort((a, b) => b.score - a.score)
-      .map((t) => t.player)
-    const top = totalsRanked.slice(0, DEFAULT_VISIBLE_CAP)
-    const set = new Set<string>(top)
-    if (matrix.players.includes(anchorKey)) {
-      set.add(anchorKey)
-      /* Adding anchor may overflow cap; trim the lowest-ranked non-anchor */
-      if (set.size > DEFAULT_VISIBLE_CAP) {
-        const trimCandidate = [...totalsRanked].reverse().find((p) => p !== anchorKey && set.has(p))
-        if (trimCandidate) set.delete(trimCandidate)
-      }
-    }
-    return set
-  }, [searchParams, matrix.players, matrix.totals, anchorKey])
+    return capVisibleSet(new Set(matrix.players))
+  }, [searchParams, matrix.players, anchorKey, baselineRankedPlayers, capVisibleSet])
 
   const hasOverrides = useMemo(() => {
     if (!searchParams) return false
@@ -245,12 +243,13 @@ export function useDecisionState(
         } else {
           current.add(key)
         }
-        const list = matrix.players.filter((k) => current.has(k))
+        const capped = capVisibleSet(current)
+        const list = matrix.players.filter((k) => capped.has(k))
         if (list.length === matrix.players.length) params.delete(PLAYERS_PARAM)
         else params.set(PLAYERS_PARAM, list.join(","))
       })
     },
-    [anchorKey, matrix.players, pushParams, visiblePlayers],
+    [anchorKey, capVisibleSet, matrix.players, pushParams, visiblePlayers],
   )
 
   const setVisiblePlayers = useCallback(
@@ -258,15 +257,18 @@ export function useDecisionState(
       pushParams((params) => {
         const set = new Set(keys.filter((k) => matrix.players.includes(k)))
         if (matrix.players.includes(anchorKey)) set.add(anchorKey)
-        const list = matrix.players.filter((k) => set.has(k))
-        if (list.length === 0 || list.length === matrix.players.length) {
+        const capped = capVisibleSet(set)
+        const list = matrix.players.filter((k) => capped.has(k))
+        const defaultTop20 = capVisibleSet(new Set(matrix.players))
+        const isDefaultTop20 = list.length === defaultTop20.size && list.every((key) => defaultTop20.has(key))
+        if (list.length === 0 || isDefaultTop20) {
           params.delete(PLAYERS_PARAM)
         } else {
           params.set(PLAYERS_PARAM, list.join(","))
         }
       })
     },
-    [anchorKey, matrix.players, pushParams],
+    [anchorKey, capVisibleSet, matrix.players, pushParams],
   )
 
   const setComparePair = useCallback(

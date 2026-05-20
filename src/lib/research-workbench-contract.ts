@@ -143,7 +143,7 @@ const LEGACY_RESEARCH_METHOD_IDS: Record<string, ResearchMethodId> = {
 export const OPENROUTER_CLI_LABEL = "OpenRouter CLI"
 export const OPENROUTER_API_BASE_URL = "https://openrouter.ai/api/v1"
 
-export type ResearchCliId = "claude" | "codex" | "gemini" | "byok"
+export type ResearchCliId = "claude" | "codex" | "gemini" | "research-core" | "byok"
 
 export type ResearchByokConfig = {
   baseUrl: string
@@ -513,8 +513,28 @@ export function buildResearchCliInput(request: ResearchRunRequest, workspaceRoot
   if (request.cliId === "codex") {
     return buildMethodSkillInvocation(request, workspaceRoot, outputSlug, "codex")
   }
+  if (request.cliId === "research-core") {
+    return buildResearchCoreRuntimePrompt(request, outputSlug)
+  }
 
   return buildResearchFallbackPrompt(request)
+}
+
+function buildResearchCoreRuntimePrompt(request: ResearchRunRequest, outputSlug: string) {
+  const method = methodById(request.methodId)
+  return [
+    "Execute pelo runtime local `research-core`.",
+    "",
+    `Pergunta de pesquisa: ${request.query}`,
+    `Modo solicitado no Workbench: ${method.label} — ${method.description}`,
+    `Diretório Gold canônico: docs/research/${outputSlug}`,
+    "",
+    "Contrato do runtime:",
+    "- Rodar AgentLoop + search mock/SearXNG quando configurado.",
+    "- Validar citações com `CitationHandler`.",
+    "- Emitir pacote Gold mínimo via `GoldAdapter`.",
+    "- Não declarar pesquisa Gold completa quando estiver usando fixture/mock.",
+  ].join("\n")
 }
 
 function buildMethodSkillInvocation(
@@ -812,8 +832,17 @@ function buildTechResearchRuntimeProtocol(depth: ResearchRunRequest["depth"], ru
         ]
       : method.id === "benchmark"
         ? [
-            "- Validação BENCHMARK obrigatória: gere JSON + Markdown e valide `bench-output-dash.json` contra `squads/research/data/bench-output-dash.schema.json` quando ferramentas locais existirem.",
-            "- Carregue `squads/research/data/bench-dimension-packs.yaml`, `squads/research/data/bench-output-formats.yaml` e `squads/research/checklists/bench-quality-checklist.md` antes do score final.",
+            "- Validação BENCHMARK obrigatória: gere JSON + Markdown e valide `bench-output-dash.json` contra o contrato real do Observatory antes do score final.",
+            "- Carregue `apps/research/src/lib/bench-dashboard.server.ts`, `squads/research/tasks/emit-bench-dash.md`, `squads/research/data/bench-output-formats.yaml`, `squads/research/data/bench-skeleton.md` e `squads/research/checklists/bench-quality-checklist.md` antes de emitir o dash.",
+            "- Não confunda o arquivo de entrada com o tipo interno: `bench-output-dash.json` é a projeção lida do disco; `BenchDashboardData`/`stats`/`runs`/`selectedRun` é shape de retorno do servidor.",
+            "- `/observatory/bench` renderiza a partir de JSON/MD/MMD lidos no diretório do bench. YAMLs são sidecars de auditoria/contrato, não podem ser citados como fonte de preenchimento visual salvo se o código do app os parsear.",
+            "- Antes do scoring, emita triagem de fontes: quais arquivos são fonte de players, contexto, inválidos ou estruturados vazios; não derive players de YAML vazio sem fallback explícito.",
+            "- Se o usuário pedir benchmark profundo, Gold, absorption, landscape, slides-creator-like ou renderização em `/observatory/bench`, rode `npm run bench:gold:validate -- {slug}` e corrija todos os blockers antes de declarar pronto.",
+            "- Invariantes de renderização: `players[].key`, `matrix.players[]` e `matrix.rows[].cells[].player` devem usar os mesmos IDs; `summary.players` deve bater com `players.length`; total de células deve ser `matrix.rows.length * players.length`.",
+            "- Invariantes de identidade: folder slug, `MANIFEST.slug`, `bench-contract.slug`, `metadata.canonical.bench.id` e `bench-output-dash.json.benchmark.slug` devem coincidir.",
+            "- Invariantes de artefato: todos os `.json` sob o diretório do bench devem parsear; `MANIFEST.json` deve listar os artefatos materiais; benches codebase/absorption devem verificar cada `local_clone`/`local_path` antes de pontuar.",
+            "- Invariantes de decisão Gold: `bench-output-dash.json` deve trazer `source_summary[]`, `categorical{}`, `tiebreakers[]`, `cliffs[]` e `decision_tree[]`; uma matriz completa sem esses blocos não é dashboard-ready.",
+            "- Não declare 100%, Gold ou dashboard-ready sem `bench:gold:validate` PASS e `npm run validate:yaml:changed` PASS.",
           ]
         : [
             "- Validação obrigatória: auditabilidade de fontes, lacunas explícitas, bias check e síntese compatível com o workflow canônico do modo.",
@@ -864,7 +893,7 @@ function buildTechResearchRuntimeProtocol(depth: ResearchRunRequest["depth"], ru
 }
 
 function isResearchCliId(value: unknown): value is ResearchCliId {
-  return value === "claude" || value === "codex" || value === "gemini" || value === "byok"
+  return value === "claude" || value === "codex" || value === "gemini" || value === "research-core" || value === "byok"
 }
 
 function isResearchMethodId(value: unknown): value is ResearchMethodId {

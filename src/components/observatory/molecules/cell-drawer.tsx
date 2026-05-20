@@ -30,29 +30,7 @@ export function CellDrawer({
   onDismiss: () => void
 }) {
   if (!selection) {
-    return (
-      <aside
-        className="sticky top-0 hidden h-full min-h-0 w-[300px] shrink-0 border-l border-[var(--rule)] bg-[var(--paper-alt)] xl:block"
-        aria-hidden="true"
-      >
-        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-          <div className="text-[28px] leading-none text-[var(--ink-faint)]">◇</div>
-          <div
-            className="text-[10px] uppercase tracking-[0.16em] text-[var(--ink-3)]"
-            style={{ fontFamily: MONO_FONT }}
-          >
-            Tap any matrix cell
-          </div>
-          <p
-            className="text-[12px] italic leading-[1.55] text-[var(--ink-3)]"
-            style={{ fontFamily: SERIF_FONT }}
-          >
-            Cell-level commentary, evidence quote, and source citation
-            appear here when you select a cell from the grid.
-          </p>
-        </div>
-      </aside>
-    )
+    return null
   }
 
   return (

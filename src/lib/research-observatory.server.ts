@@ -218,6 +218,10 @@ function shouldHideLegacyParallelSlug(slug: string, slugs: Set<string>) {
   return canonical !== slug && slugs.has(canonical)
 }
 
+function shouldHideInternalValidationRun(slug: string) {
+  return /(?:^|-)gold-[a-z0-9-]+-profile-fixture$/.test(slug) || /(?:^|-)research-core-launcher-smoke$/.test(slug)
+}
+
 function extractHeading(markdown: string) {
   const heading = markdown.match(/^#\s+(.+)$/m)?.[1]?.trim()
   return heading ? heading.replace(/^Research:\s*/i, "") : null
@@ -796,6 +800,7 @@ async function getCachedRunSummaries(researchRoot: string, index: Map<string, In
   const slugSet = new Set(allSlugs)
   const runSlugs = allSlugs
     .filter((slug) => !shouldHideLegacyParallelSlug(slug, slugSet))
+    .filter((slug) => !shouldHideInternalValidationRun(slug))
     .sort((a, b) => b.localeCompare(a))
   const summaries = await Promise.all(
     runSlugs.map((slug) => buildRunSummary(path.join(researchRoot, slug), slug, index.get(slug))),

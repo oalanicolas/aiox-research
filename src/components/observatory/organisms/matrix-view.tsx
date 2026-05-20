@@ -15,6 +15,8 @@ import { DISPLAY_FONT, MONO_FONT, SERIF_FONT } from "../foundations/theme"
 import { rankPlayers, useDecisionState } from "../foundations/use-decision-state"
 
 const COMPARE_PALETTE = ["#ef4444", "#3b82f6", "#f59e0b", "#8b5cf6", "#10b981", "#ec4899", "#94a3b8"]
+const SCORE_STRONG_THRESHOLD = 75
+const SCORE_PARTIAL_THRESHOLD = 45
 
 function scoreGap(row: ObservatoryMatrixRow): number {
   if (row.cells.length < 2) return 0
@@ -87,8 +89,8 @@ function matrixCategory(row: ObservatoryMatrixRow): { id: string; label: string 
 
 function matrixCellIndicator(score: number | null, isWinner: boolean): { mark: string; tone: "yes" | "part" | "no"; label: string } {
   if (score === null || !Number.isFinite(score) || score <= 0) return { mark: "×", tone: "no", label: "ausente" }
-  if (isWinner || score >= 75) return { mark: "✓", tone: "yes", label: "forte" }
-  if (score >= 45) return { mark: "◐", tone: "part", label: "parcial" }
+  if (isWinner || score >= SCORE_STRONG_THRESHOLD) return { mark: "✓", tone: "yes", label: "forte" }
+  if (score >= SCORE_PARTIAL_THRESHOLD) return { mark: "◐", tone: "part", label: "parcial" }
   return { mark: "×", tone: "no", label: "fraco" }
 }
 
@@ -122,7 +124,7 @@ export function MatrixView({
   personas?: ObservatoryPersona[]
 }) {
   const players = matrix.players
-  const decision = useDecisionState(matrix, personas)
+  const decision = useDecisionState(matrix, personas, { maxVisiblePlayers: 20 })
   const { weights, visiblePlayers, personaActive, hasOverrides, togglePlayer, resetAll, permalink } = decision
 
   const [selected, setSelected] = useState<{ rowKey: string; player: string } | null>(null)
@@ -149,12 +151,16 @@ export function MatrixView({
     [matrix, weights, visiblePlayers],
   )
 
-  /* Column order = best → worst by current weighted score (totalsLive).
-     totalsLive já vem ordenado desc por score; só extraímos a sequência de
-     player keys. Quando o user troca pesos/persona, as colunas se reordenam. */
+  /* Column order keeps the internal reference first, then ranks the remaining
+     visible players by the current weighted score. */
   const visiblePlayersList = useMemo(
-    () => totalsLive.map((entry) => entry.player),
-    [totalsLive],
+    () => {
+      const anchor = players.find((player) => player === "aiox_research") ?? players[0]
+      const ranked = totalsLive.map((entry) => entry.player)
+      if (!visiblePlayers.has(anchor)) return ranked
+      return [anchor, ...ranked.filter((player) => player !== anchor)]
+    },
+    [players, totalsLive, visiblePlayers],
   )
 
   const groupedRows = useMemo(() => {
@@ -354,8 +360,8 @@ export function MatrixView({
                   },
                 },
                 {
-                  label: "Mostrar todos",
-                  apply: () => decision.setVisiblePlayers(players),
+                  label: "Top 20",
+                  apply: () => decision.setVisiblePlayers(totalsLive.slice(0, 20).map((t) => t.player)),
                 },
               ].map((bulk) => (
                 <button

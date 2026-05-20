@@ -344,12 +344,25 @@ function formatValue(value: unknown, fallback = "--") {
   return String(value)
 }
 
+function shouldHideInternalBenchRun(slug: string) {
+  return /(?:^|-)gold-[a-z0-9-]+-fixture$/.test(slug) ||
+    /(?:^|-)smoke(?:-|$)/.test(slug) ||
+    /(?:^|-)rescore-post-adr\d+$/.test(slug)
+}
+
+function shouldHideInternalBenchFile(file: string) {
+  if (/^(bench-output-dash|MANIFEST|dashboard-intelligence)\.json$/i.test(file)) return true
+  return /^execution-results\/\d{4}-\d{2}-\d{2}-contract-dry-run(?:\/|$)/.test(file) ||
+    /(?:^|\/)(?:__fixtures__|fixtures|smoke-tests?)(?:\/|$)/.test(file)
+}
+
 async function listFilesDeep(dir: string, prefix = ""): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true })
   const result: string[] = []
 
   for (const entry of entries) {
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name
+    if (shouldHideInternalBenchFile(rel)) continue
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
       result.push(...await listFilesDeep(full, rel))
@@ -1549,6 +1562,7 @@ export async function getBenchDashboardData(slugParam?: string, fileParam?: stri
   const slugs = entries
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_") && !entry.name.startsWith("."))
     .map((entry) => entry.name)
+    .filter((slug) => !shouldHideInternalBenchRun(slug))
     .sort()
   const summaries = await Promise.all(slugs.map((slug) => buildSummary(path.join(benchRoot, slug), slug)))
   summaries.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title))

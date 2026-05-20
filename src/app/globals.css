@@ -1400,6 +1400,102 @@ a {
   color: var(--fmx-accent, var(--report-dim));
 }
 
+.aiox-matrix-reader,
+.aiox-matrix-scroll {
+  width: min(100%, calc(100vw - var(--dash-sidebar-w) - 48px));
+  max-width: min(100%, calc(100vw - var(--dash-sidebar-w) - 48px));
+}
+
+.aiox-shell-left-collapsed .aiox-matrix-reader,
+.aiox-shell-left-collapsed .aiox-matrix-scroll {
+  width: min(100%, calc(100vw - 32px - 48px));
+  max-width: min(100%, calc(100vw - 32px - 48px));
+}
+
+@media (max-width: 1279px) {
+  .aiox-matrix-reader,
+  .aiox-matrix-scroll {
+    width: min(100%, calc(100vw - var(--dash-sidebar-w-md) - 40px));
+    max-width: min(100%, calc(100vw - var(--dash-sidebar-w-md) - 40px));
+  }
+
+  .aiox-shell-left-collapsed .aiox-matrix-reader,
+  .aiox-shell-left-collapsed .aiox-matrix-scroll {
+    width: min(100%, calc(100vw - 32px - 40px));
+    max-width: min(100%, calc(100vw - 32px - 40px));
+  }
+}
+
+@media (max-width: 767px) {
+  .aiox-matrix-reader,
+  .aiox-matrix-scroll {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-head .cell {
+  padding: 10px 6px;
+  min-height: 74px;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-head .plyr {
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-head .plyr-label {
+  max-width: 32px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.08em;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .lab {
+  padding: 16px 14px;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .lab .nm {
+  font-size: 13px;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .lab .sub {
+  font-size: 9px;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .pcell,
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .winner {
+  min-height: 72px;
+  padding: 10px 2px;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-mark {
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .val {
+  font-size: 9.5px;
+  letter-spacing: 0;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .state {
+  display: none;
+}
+
+.aiox-map-matrix.is-compact .aiox-duel-fmx-row .winner {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
 @media (max-width: 1100px) {
   .aiox-duel-arena-grid,
   .aiox-duel-scoreboard,

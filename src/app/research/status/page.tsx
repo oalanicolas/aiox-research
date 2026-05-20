@@ -162,6 +162,7 @@ function launchCommandFor(cliId: ResearchCliStatus["id"]) {
   if (cliId === "claude") return "claude -p --permission-mode bypassPermissions"
   if (cliId === "codex") return "codex exec --skip-git-repo-check --sandbox workspace-write"
   if (cliId === "gemini") return "gemini --yolo"
+  if (cliId === "research-core") return "node --experimental-strip-types apps/research/packages/research-core/src/cli.ts"
   if (cliId === "byok") return "OpenRouter CLI"
   return "launcher não habilitado"
 }

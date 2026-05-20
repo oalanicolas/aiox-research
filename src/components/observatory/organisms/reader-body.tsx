@@ -63,9 +63,6 @@ const WeightsView = dynamic(() => import("./weights-view").then((mod) => mod.Wei
 const BenchOverviewView = dynamic(() => import("./bench-overview-view").then((mod) => mod.BenchOverviewView), {
   loading: () => null,
 })
-const DuelView = dynamic(() => import("./duel-view").then((mod) => mod.DuelView), {
-  loading: () => null,
-})
 const DocsView = dynamic(() => import("./docs-view").then((mod) => mod.DocsView), {
   loading: () => null,
 })
@@ -291,9 +288,7 @@ export function ReaderBody({
     return benchReport(<MatrixView matrix={matrix} playerProfiles={playerProfiles ?? []} personas={personas ?? []} />)
   }
   if (mode === "duel" && matrix) {
-    /* DuelView (org.) is URL-state aware (?compare=a,b) and uses live weighted totals.
-       BenchDuelReport (inline above) is the legacy report-shell version kept for ref. */
-    return benchReport(<DuelView matrix={matrix} playerProfiles={playerProfiles ?? []} personas={personas ?? []} />)
+    return <BenchDuelReport matrix={matrix} playerProfiles={playerProfiles ?? []} />
   }
   if (mode === "personas") {
     return <BenchPersonasReport personas={personas ?? []} playerProfiles={playerProfiles ?? []} matrix={matrix ?? null} />
@@ -2598,13 +2593,15 @@ function BenchDuelReport({
     () => [...matrix.players].sort((a, b) => (totalsByPlayer.get(b) ?? 0) - (totalsByPlayer.get(a) ?? 0)),
     [matrix.players, totalsByPlayer],
   )
-  const [left, setLeft] = useState(players[0] ?? "")
-  const [right, setRight] = useState(players[1] ?? players[0] ?? "")
+  const defaultLeft = players.includes("aiox_research") ? "aiox_research" : players[0] ?? ""
+  const defaultRight = players.find((player) => player !== defaultLeft) ?? players[1] ?? players[0] ?? ""
+  const [left, setLeft] = useState(defaultLeft)
+  const [right, setRight] = useState(defaultRight)
 
   useEffect(() => {
-    setLeft(players[0] ?? "")
-    setRight(players[1] ?? players[0] ?? "")
-  }, [players])
+    setLeft(defaultLeft)
+    setRight(defaultRight)
+  }, [defaultLeft, defaultRight])
 
   const profileByKey = useMemo(() => new Map(playerProfiles.map((profile) => [profile.key, profile])), [playerProfiles])
   const playerName = (key: string) => displayBenchPlayer(key, playerProfiles)
@@ -2678,6 +2675,8 @@ function BenchDuelReport({
   const rightWinPct = (duel.rightWins.length / totalWinCount) * 100
   const leftStrong = formatDuelStrongDimensions(duel.leftWins)
   const rightStrong = formatDuelStrongDimensions(duel.rightWins)
+  const leftRank = duel.leader === "tie" ? 1 : duel.leader === left ? 1 : 2
+  const rightRank = duel.leader === "tie" ? 1 : duel.leader === right ? 1 : 2
   const scaledTotalLeft = scaleDuelTotal(duel.totalLeft)
   const scaledTotalRight = scaleDuelTotal(duel.totalRight)
   const scaledGap = Math.abs(scaledTotalLeft - scaledTotalRight)
@@ -2775,6 +2774,7 @@ function BenchDuelReport({
               strongDimensions={leftStrong}
               dimensions={matrix.rows.length}
               active={duel.leader === left}
+              rank={leftRank}
               displayName={duelPlayerName(left)}
             />
             <div className="aiox-vs-blade">
@@ -2802,6 +2802,7 @@ function BenchDuelReport({
               strongDimensions={rightStrong}
               dimensions={matrix.rows.length}
               active={duel.leader === right}
+              rank={rightRank}
               displayName={duelPlayerName(right)}
             />
           </div>
@@ -3058,6 +3059,7 @@ function BenchDuelArenaPlayer({
   strongDimensions,
   dimensions,
   active,
+  rank,
   displayName,
 }: {
   side: "left" | "right"
@@ -3073,12 +3075,13 @@ function BenchDuelArenaPlayer({
   strongDimensions: string
   dimensions: number
   active: boolean
+  rank: number
   displayName: string
 }) {
   const alignRight = side === "right"
   const profile = playerProfiles.find((item) => item.key === value)
   const tagline = [profile?.type, profile?.origin, profile?.category, profile?.tag].filter(Boolean).join(" · ") || meta
-  const role = active ? "Vencedor" : score >= 0 ? "Runner-up" : "Challenger"
+  const role = active ? "Vencedor" : rank === 1 ? "Empate" : rank === 2 ? "Runner-up" : "Challenger"
   return (
     <section className={cn("aiox-duel-corner", alignRight ? "right" : "left", active && "winner")} style={{ "--duel-player-color": color } as CSSProperties}>
       <span className="aiox-duel-corner-tag">
