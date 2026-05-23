@@ -1,9 +1,27 @@
 import "server-only"
 
+import { existsSync } from "node:fs"
 import { readdir, readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import { EmptyObservatorySourceError } from "./observatory-errors.server"
 import { resolveDashPath } from "./workspace-root.server"
+
+/**
+ * In deploy mode (Vercel) the bench observatory only exposes runs that carry
+ * a `comparison-matrix.json` — the canonical artifact that signals "matrix
+ * ready" / Gold or quasi-Gold completeness. Local dev keeps all runs visible
+ * so iteration on in-progress benches still works.
+ */
+function isRemoteDeployMode(): boolean {
+  return (
+    process.env.DEPLOY_MODE?.trim().toLowerCase() === "remote" ||
+    process.env.VERCEL === "1"
+  )
+}
+
+function benchHasMatrix(benchRoot: string, slug: string): boolean {
+  return existsSync(path.join(benchRoot, slug, "comparison-matrix.json"))
+}
 
 export type BenchDocument = {
   id: string
@@ -1559,10 +1577,12 @@ async function readExecutionLog(benchPath: string): Promise<BenchWaveEvent[]> {
 export async function getBenchDashboardData(slugParam?: string, fileParam?: string): Promise<BenchDashboardData> {
   const benchRoot = resolveDashPath("docs", "bench")
   const entries = await readdir(benchRoot, { withFileTypes: true })
+  const remoteOnlyMatrix = isRemoteDeployMode()
   const slugs = entries
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_") && !entry.name.startsWith("."))
     .map((entry) => entry.name)
     .filter((slug) => !shouldHideInternalBenchRun(slug))
+    .filter((slug) => !remoteOnlyMatrix || benchHasMatrix(benchRoot, slug))
     .sort()
   const summaries = await Promise.all(slugs.map((slug) => buildSummary(path.join(benchRoot, slug), slug)))
   summaries.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title))
