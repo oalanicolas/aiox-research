@@ -109,7 +109,10 @@ function formatBytes(n) {
 
 async function clean(targetDir) {
   if (!existsSync(targetDir)) return
-  await rm(targetDir, { recursive: true, force: true })
+  // ENOTEMPTY can fire on macOS when many files are nested deeply (timing
+  // issue between rmdir and contents). maxRetries handles it; retryDelay
+  // backs off briefly.
+  await rm(targetDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
 }
 
 async function copySubtree(repoRoot, [sourceRel, destRel]) {

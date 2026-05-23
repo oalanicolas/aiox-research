@@ -787,6 +787,18 @@ async function buildDocuments(runPath: string, view?: ReaderMode, selectedFile?:
   )
 }
 
+// In deploy mode, only runs with schema "rich" or "full" (i.e., hasCore +
+// hasMetrics + hasState present, the bar for rendering most observatory
+// fields) are exposed. Local dev keeps every run visible.
+const REMOTE_RUN_SCHEMAS = new Set(["rich", "full"])
+
+function isRemoteDeployMode(): boolean {
+  return (
+    process.env.DEPLOY_MODE?.trim().toLowerCase() === "remote" ||
+    process.env.VERCEL === "1"
+  )
+}
+
 async function getCachedRunSummaries(researchRoot: string, index: Map<string, IndexEntry>) {
   const now = Date.now()
   if (summaryCache && summaryCache.root === researchRoot && summaryCache.expiresAt > now) {
@@ -802,9 +814,12 @@ async function getCachedRunSummaries(researchRoot: string, index: Map<string, In
     .filter((slug) => !shouldHideLegacyParallelSlug(slug, slugSet))
     .filter((slug) => !shouldHideInternalValidationRun(slug))
     .sort((a, b) => b.localeCompare(a))
-  const summaries = await Promise.all(
+  const allSummaries = await Promise.all(
     runSlugs.map((slug) => buildRunSummary(path.join(researchRoot, slug), slug, index.get(slug))),
   )
+  const summaries = isRemoteDeployMode()
+    ? allSummaries.filter((summary) => REMOTE_RUN_SCHEMAS.has(summary.schema))
+    : allSummaries
   summaryCache = {
     root: researchRoot,
     expiresAt: now + RESEARCH_CACHE_TTL_MS,

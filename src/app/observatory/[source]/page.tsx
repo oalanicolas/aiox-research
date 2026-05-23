@@ -66,11 +66,23 @@ export async function generateMetadata({ params, searchParams }: ObservatoryPage
   return { title: baseTitle, description }
 }
 
+// Inline deploy-mode guard — bypass any module-state cache that might serve
+// pre-filter results in stale warm lambdas.
+const REMOTE_HIDDEN_SOURCES: ReadonlySet<ObservatorySource> = new Set(["sinkra-maps", "demo"])
+
+function isRemoteDeployMode(): boolean {
+  return (
+    process.env.DEPLOY_MODE?.trim().toLowerCase() === "remote" ||
+    process.env.VERCEL === "1"
+  )
+}
+
 export default async function ObservatoryPage({ params, searchParams }: ObservatoryPageProps) {
   const { source } = await params
-  if (!VALID_SOURCES.includes(source as ObservatorySource) || !isObservatorySourceAvailable(source as ObservatorySource)) {
-    notFound()
-  }
+  const key = source as ObservatorySource
+  if (!VALID_SOURCES.includes(key)) notFound()
+  if (isRemoteDeployMode() && REMOTE_HIDDEN_SOURCES.has(key)) notFound()
+  if (!isObservatorySourceAvailable(key)) notFound()
   const sp = await searchParams
   const availableSources = getAvailableObservatorySources()
   let data: ObservatoryData
